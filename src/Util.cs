@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Consol
@@ -14,7 +12,7 @@ namespace Consol
         /// <summary>
         /// Find a <see cref="Player"/> by their name. Case insensitive, and allows partial matches.
         /// </summary>
-        /// <param name="name">Name of the player to lookup, or the start of their name.</param>
+        /// <param name="name">Name of the player to lookup, or the start of their name to try for a partial match.</param>
         /// <param name="foundMultiple"><see langword="true"/> if there were multiple matches for the query, <see langword="false"/> if not.</param>
         /// <returns>
         /// <see cref="Player"/> found by the search, or <see langword="null"/> if no player with that name could be found or there were
@@ -26,11 +24,10 @@ namespace Consol
 
             try
             {
-                var query = (
+                var query =
                     from player in Player.GetAllPlayers()
                     where player.GetPlayerName().ToLower().Simplified().StartsWith(name.ToLower())
-                    select player
-                );
+                    select player;
 
                 if (query.Count() > 1)
                 {
@@ -122,6 +119,35 @@ namespace Consol
             {
                 Logger.Error($"Failed to convert '{value}' to type '{toType}': {e.Message}");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Translates a <see cref="Type"/> to a nice user-friendly name.
+        /// </summary>
+        /// <param name="type"><see cref="Type"/> to translate</param>
+        /// <returns><see langword="string"/> containing the type name.</returns>
+        public static string GetSimpleTypeName(Type type)
+        {
+            switch (type.Name)
+            {
+                case nameof(Int32):
+                case nameof(Int64):
+                {
+                    return "Number";
+                }
+                case nameof(UInt32):
+                case nameof(UInt64):
+                {
+                    return "(+)Number";
+                }
+                case nameof(Single):
+                case nameof(Double):
+                {
+                    return "Decimal";
+                }
+                default:
+                    return type.Name;
             }
         }
     }

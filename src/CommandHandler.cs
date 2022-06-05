@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using UnityEngine;
 
 namespace Consol
 {
+    /// <summary>
+    /// Attribute to be applied to a static method for use by the command handler.
+    /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     internal class Command : Attribute
     {
-        public string keyword;
-        public string description;
+        public readonly string keyword;
+        public readonly string description;
 
         public Command(string keyword, string description)
         {
@@ -20,14 +24,61 @@ namespace Consol
         }
     }
 
+    /// <summary>
+    /// This class is responsible for parsing and running commands. All commands are
+    /// defined here as public static methods and annotated with the <see cref="Command"/> attribute.
+    /// </summary>
     internal class CommandHandler
     {
+        /// <summary>
+        /// Stores metadata information about a command, including a reference to the method in question.
+        /// </summary>
         internal class CommandMeta
         {
-            public Command data;
-            public MethodBase method;
-            public List<ParameterInfo> arguments;
-            public string hint;
+            /// <summary>
+            /// <see cref="Command"/> attribute data to access the command name and description.
+            /// </summary>
+            public readonly Command data;
+            /// <summary>
+            /// The actual command function.
+            /// </summary>
+            public readonly MethodBase method;
+            /// <summary>
+            /// A <see cref="List{ParameterInfo}"/> of argument information.
+            /// </summary>
+            public readonly List<ParameterInfo> arguments;
+            /// <summary>
+            /// A <see langword="string"/> representing argument types, names, and whether they are required
+            /// parameters, e.g. <c>&lt;number amount&gt; [Player player]</c>
+            /// </summary>
+            public readonly string hint;
+
+            public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments)
+            {
+                this.data = data;
+                this.method = method;
+                this.arguments = arguments;
+
+                if (arguments.Count > 0)
+                {
+                    StringBuilder builder = new StringBuilder();
+
+                    foreach (ParameterInfo info in arguments)
+                    {
+                        bool optional = info.HasDefaultValue;
+
+                        if (!optional)
+                            builder.Append($"<{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}> ");
+                        else
+                            builder.Append($"[{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}={info.DefaultValue}] ");
+                    }
+
+                    // Remove trailing space.
+                    builder.Remove(builder.Length - 1, 1);
+
+                    this.hint = builder.ToString();
+                }
+            }
         }
 
         private Dictionary<string, CommandMeta> m_actions;
@@ -48,12 +99,7 @@ namespace Consol
             IEnumerable<CommandMeta> query =
                 from method in typeof(CommandHandler).GetMethods()
                 from attribute in method.GetCustomAttributes().OfType<Command>()
-                select new CommandMeta()
-                {
-                    data = attribute,
-                    method = method,
-                    arguments = method.GetParameters().ToList()
-                };
+                select new CommandMeta(attribute, method, method.GetParameters().ToList());
 
             Logger.Log($"Registering {query.Count()} commands...");
 
