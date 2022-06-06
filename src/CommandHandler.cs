@@ -121,7 +121,15 @@ namespace Consol
                 /// TODO: Register with a custom prefix, maybe controlled by config?
                 /// Have to reload/reregister commands when prefix is changed I guess.
                 m_actions.Add("/" + command.data.keyword, command);
-                new Terminal.ConsoleCommand("/" + command.data.keyword, command.data.description, delegate (Terminal.ConsoleEventArgs args)
+
+                string helpText;
+
+                if (command.arguments.Count > 0)
+                    helpText = $"{command.hint} - {command.data.description}";
+                else
+                    helpText = command.data.description;
+
+                new Terminal.ConsoleCommand("/" + command.data.keyword, helpText, delegate (Terminal.ConsoleEventArgs args)
                 {
                     ParseAndRun(args.FullLine);
                 });
