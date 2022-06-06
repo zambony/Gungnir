@@ -52,6 +52,7 @@ namespace Consol
             /// parameters, e.g. <c>&lt;number amount&gt; [Player player]</c>
             /// </summary>
             public readonly string hint;
+            public int requiredArguments;
 
             public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments)
             {
@@ -67,6 +68,8 @@ namespace Consol
                     {
                         bool optional = info.HasDefaultValue;
 
+                        requiredArguments += optional ? 0 : 1;
+
                         if (!optional)
                             builder.Append($"<{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}> ");
                         else
@@ -76,7 +79,11 @@ namespace Consol
                     // Remove trailing space.
                     builder.Remove(builder.Length - 1, 1);
 
-                    this.hint = builder.ToString();
+                    hint = builder.ToString();
+                }
+                else
+                {
+                    requiredArguments = 0;
                 }
             }
         }
@@ -88,6 +95,12 @@ namespace Consol
         {
             m_actions = new Dictionary<string, CommandMeta>();
             Register();
+        }
+
+        [Command("test", "Tests if the mod works.")]
+        public static void Test(string text)
+        {
+            Logger.Log("Your command has been run: " + text, true);
         }
 
         /// <summary>
@@ -105,7 +118,13 @@ namespace Consol
 
             foreach (CommandMeta command in query)
             {
-                m_actions.Add(command.data.keyword, command);
+                /// TODO: Register with a custom prefix, maybe controlled by config?
+                /// Have to reload/reregister commands when prefix is changed I guess.
+                m_actions.Add("/" + command.data.keyword, command);
+                new Terminal.ConsoleCommand("/" + command.data.keyword, command.data.description, delegate (Terminal.ConsoleEventArgs args)
+                {
+                    ParseAndRun(args.FullLine);
+                });
                 Logger.Log($"Registered command {command.data.keyword}");
             }
 
@@ -136,7 +155,13 @@ namespace Consol
             // Look up the command value, fail if it doesn't exist.
             if (!m_actions.TryGetValue(commandName, out CommandMeta command))
             {
-                Logger.Error($"Unknown command '{commandName}'");
+                Logger.Error($"Unknown command '{commandName}'", true);
+                return;
+            }
+
+            if (args.Count < command.requiredArguments)
+            {
+                Logger.Error($"Missing required number of arguments for '{commandName}'", true);
                 return;
             }
 
@@ -156,9 +181,11 @@ namespace Consol
                 // Couldn't convert, oh well!
                 if (converted == null)
                 {
-                    Logger.Error($"Error while converting arguments for command '{commandName}'");
+                    Logger.Error($"Error while converting arguments for command '{commandName}'", true);
                     return;
                 }
+
+                convertedArgs.Add(converted);
             }
 
             // Invoke the method, which will expand all the arguments automagically.

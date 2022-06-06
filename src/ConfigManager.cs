@@ -22,7 +22,7 @@ namespace Consol
             ConfigEntry<T> value;
 
             if (!s_config.TryGetValue(key, out obj))
-                Debug.LogError($"[Consol] Attempt to access nonexistent config value '{key}'.");
+                Logger.Error($"Attempt to access nonexistent config value '{key}'.");
 
             value = obj as ConfigEntry<T>;
 

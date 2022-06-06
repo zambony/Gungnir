@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using HarmonyLib;
 using UnityEngine;
+using Consol.Patch;
 
 namespace Consol
 {
@@ -14,7 +15,7 @@ namespace Consol
         public const string ModVersion = "1.0.0";
 
         private readonly Harmony m_harmony;
-        private readonly CommandHandler m_handler;
+        private CommandHandler m_handler;
 
         public Consol() : base()
         {
@@ -22,12 +23,20 @@ namespace Consol
             m_handler = new CommandHandler();
         }
 
-        void Awake() => m_harmony.PatchAll();
+        void Awake() => m_harmony.PatchAll(typeof(PatchManager).Assembly);
+        void OnDestroy()
+        {
+            m_harmony.UnpatchSelf();
+            // Destroy the handler so things re-register.
+            m_handler = null;
+        }
 
         void Start()
         {
             DontDestroyOnLoad(this.gameObject);
             this.transform.parent = null;
+
+            ConfigManager.Init(Config);
         }
     }
 }

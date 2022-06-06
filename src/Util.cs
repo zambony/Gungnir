@@ -102,22 +102,24 @@ namespace Consol
                             return player;
                         else if (foundMultiple)
                         {
-                            Logger.Error($"Found multiple players with the name '{value}'");
+                            Logger.Error($"Found multiple players with the name '{value}'", true);
                             return null;
                         }
                         else
                         {
-                            Logger.Error($"No player named '{value}'");
+                            Logger.Error($"No player named '{value}'", true);
                             return null;
                         }
                     }
                 }
+                else if (toType == typeof(string))
+                    return value;
 
                 return Convert.ChangeType(value, toType);
             }
             catch (Exception e)
             {
-                Logger.Error($"Failed to convert '{value}' to type '{toType}': {e.Message}");
+                Logger.Error($"Failed to convert '{value}' to type '{toType}': {e.Message}", true);
                 return null;
             }
         }
