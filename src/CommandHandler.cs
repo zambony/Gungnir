@@ -25,69 +25,69 @@ namespace Consol
     }
 
     /// <summary>
+    /// Stores metadata information about a command, including a reference to the method in question.
+    /// </summary>
+    internal class CommandMeta
+    {
+        /// <summary>
+        /// <see cref="Command"/> attribute data to access the command name and description.
+        /// </summary>
+        public readonly Command data;
+        /// <summary>
+        /// The actual command function.
+        /// </summary>
+        public readonly MethodBase method;
+        /// <summary>
+        /// A <see cref="List{ParameterInfo}"/> of argument information.
+        /// </summary>
+        public readonly List<ParameterInfo> arguments;
+        /// <summary>
+        /// A <see langword="string"/> representing argument types, names, and whether they are required
+        /// parameters, e.g. <c>&lt;number amount&gt; [Player player]</c>
+        /// </summary>
+        public readonly string hint;
+        public int requiredArguments;
+
+        public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments)
+        {
+            this.data = data;
+            this.method = method;
+            this.arguments = arguments;
+
+            if (arguments.Count > 0)
+            {
+                StringBuilder builder = new StringBuilder();
+
+                foreach (ParameterInfo info in arguments)
+                {
+                    bool optional = info.HasDefaultValue;
+
+                    requiredArguments += optional ? 0 : 1;
+
+                    if (!optional)
+                        builder.Append($"<{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}> ");
+                    else
+                        builder.Append($"[{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}={info.DefaultValue}] ");
+                }
+
+                // Remove trailing space.
+                builder.Remove(builder.Length - 1, 1);
+
+                hint = builder.ToString();
+            }
+            else
+            {
+                requiredArguments = 0;
+            }
+        }
+    }
+
+    /// <summary>
     /// This class is responsible for parsing and running commands. All commands are
     /// defined here as public static methods and annotated with the <see cref="Command"/> attribute.
     /// </summary>
     internal class CommandHandler
     {
-        /// <summary>
-        /// Stores metadata information about a command, including a reference to the method in question.
-        /// </summary>
-        internal class CommandMeta
-        {
-            /// <summary>
-            /// <see cref="Command"/> attribute data to access the command name and description.
-            /// </summary>
-            public readonly Command data;
-            /// <summary>
-            /// The actual command function.
-            /// </summary>
-            public readonly MethodBase method;
-            /// <summary>
-            /// A <see cref="List{ParameterInfo}"/> of argument information.
-            /// </summary>
-            public readonly List<ParameterInfo> arguments;
-            /// <summary>
-            /// A <see langword="string"/> representing argument types, names, and whether they are required
-            /// parameters, e.g. <c>&lt;number amount&gt; [Player player]</c>
-            /// </summary>
-            public readonly string hint;
-            public int requiredArguments;
-
-            public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments)
-            {
-                this.data = data;
-                this.method = method;
-                this.arguments = arguments;
-
-                if (arguments.Count > 0)
-                {
-                    StringBuilder builder = new StringBuilder();
-
-                    foreach (ParameterInfo info in arguments)
-                    {
-                        bool optional = info.HasDefaultValue;
-
-                        requiredArguments += optional ? 0 : 1;
-
-                        if (!optional)
-                            builder.Append($"<{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}> ");
-                        else
-                            builder.Append($"[{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}={info.DefaultValue}] ");
-                    }
-
-                    // Remove trailing space.
-                    builder.Remove(builder.Length - 1, 1);
-
-                    hint = builder.ToString();
-                }
-                else
-                {
-                    requiredArguments = 0;
-                }
-            }
-        }
-
         private Dictionary<string, CommandMeta> m_actions;
         private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
 
