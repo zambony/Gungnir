@@ -45,7 +45,7 @@ namespace Consol
 
                 return query.First();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return null;
             }
@@ -62,7 +62,7 @@ namespace Consol
             {
                 return (from player in Player.GetAllPlayers() where player.GetPlayerID() == id select player).First();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return null;
             }

@@ -14,16 +14,16 @@ namespace Consol
         public const string ModGUID    = ModOrg + "." + ModName;
         public const string ModVersion = "1.0.0";
 
-        private readonly Harmony m_harmony;
-        private CommandHandler m_handler;
+        private readonly Harmony m_harmony = new Harmony(ModGUID);
+        private CommandHandler   m_handler = new CommandHandler();
+        private GameObject       m_console;
 
-        public Consol() : base()
+        void Awake()
         {
-            m_harmony = new Harmony(ModGUID);
-            m_handler = new CommandHandler();
+            ConfigManager.Init(Config);
+            m_harmony.PatchAll(typeof(PatchManager).Assembly);
         }
 
-        void Awake() => m_harmony.PatchAll(typeof(PatchManager).Assembly);
         void OnDestroy()
         {
             m_harmony.UnpatchSelf();
@@ -33,10 +33,14 @@ namespace Consol
 
         void Start()
         {
-            DontDestroyOnLoad(this.gameObject);
-            this.transform.parent = null;
+            m_console = new GameObject("Consol");
+            m_console.AddComponent<CustomConsole>();
+            m_console.GetComponent<CustomConsole>().Handler = m_handler;
 
-            ConfigManager.Init(Config);
+            DontDestroyOnLoad(gameObject);
+            transform.parent = null;
+            // Attach the console manager to us.
+            m_console.transform.parent = transform;
         }
     }
 }

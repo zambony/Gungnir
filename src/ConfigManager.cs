@@ -6,14 +6,11 @@ namespace Consol
 {
     internal static class ConfigManager
     {
-        private static Dictionary<string, ConfigEntryBase> s_config;
+        private static Dictionary<string, ConfigEntryBase> s_config = new Dictionary<string, ConfigEntryBase>();
 
         public static void Init(ConfigFile config)
         {
-            s_config = new Dictionary<string, ConfigEntryBase>()
-            {
-                {"ConsoleEnabled", config.Bind<bool>("General", "ConsoleEnabled", true, "Whether the console should be enabled or not. Defaults to true.")}
-            };
+            s_config.Add("ConsoleEnabled", config.Bind<bool>("General", "ConsoleEnabled", true, "Whether the console should be enabled or not. Defaults to true."));
         }
 
         public static T get<T>(string key)

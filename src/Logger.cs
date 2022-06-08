@@ -16,7 +16,7 @@ namespace Consol
         )
         {
             if (logToConsole)
-                Console.instance.Print(message);
+                Console.instance.Print("[Consol] " + message);
 
             Debug.unityLogger.Log(type, $"[Consol:{Path.GetFileName(filePath)}:{lineNumber}] {message}");
         }

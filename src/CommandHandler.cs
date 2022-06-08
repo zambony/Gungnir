@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Consol
 {
     /// <summary>
-    /// Attribute to be applied to a static method for use by the command handler.
+    /// Attribute to be applied to a method for use by the command handler.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     internal class Command : Attribute
@@ -46,7 +46,10 @@ namespace Consol
         /// parameters, e.g. <c>&lt;number amount&gt; [Player player]</c>
         /// </summary>
         public readonly string hint;
-        public int requiredArguments;
+        /// <summary>
+        /// Number of required arguments for the command to run.
+        /// </summary>
+        public readonly int requiredArguments;
 
         public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments)
         {
@@ -84,23 +87,22 @@ namespace Consol
 
     /// <summary>
     /// This class is responsible for parsing and running commands. All commands are
-    /// defined here as public static methods and annotated with the <see cref="Command"/> attribute.
+    /// defined here as public methods and annotated with the <see cref="Command"/> attribute.
     /// </summary>
     internal class CommandHandler
     {
-        private Dictionary<string, CommandMeta> m_actions;
+        private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
         private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
 
         public CommandHandler() : base()
         {
-            m_actions = new Dictionary<string, CommandMeta>();
             Register();
         }
 
         [Command("test", "Tests if the mod works.")]
-        public static void Test(string text)
+        public void Test(string text)
         {
-            Logger.Log("Your command has been run: " + text, true);
+            Logger.Log("You said: " + text, true);
         }
 
         /// <summary>
@@ -179,7 +181,7 @@ namespace Consol
             // and attempt to convert the corresponding text value to that type.
             // We'll unpack the converted args list into the function call which will automatically
             // cast from object -> the parameter type.
-            for (int i = 0; i < command.arguments.Count; i++)
+            for (int i = 0; i < command.arguments.Count; ++i)
             {
                 Type argType = command.arguments[i].ParameterType;
                 string arg = args[i];
