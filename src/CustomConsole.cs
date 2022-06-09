@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Consol
 {
@@ -63,6 +64,14 @@ namespace Consol
                     canvas.pixelPerfect = true;
                     canvas.planeDistance = 0;  // not really necessary since we're going to screenspace, but just in case.
                     canvas.renderMode = RenderMode.ScreenSpaceOverlay;  // do this last so the text objects refresh with pixelPerfect enabled.
+                }
+
+                // I know you're here somewhere, give me your background component!!!
+                Image background = Console.instance.gameObject.GetComponentInChildren<Image>(true);
+
+                if (background != null)
+                {
+                    background.color = new Color(0.19607843137254902f, 0.21568627450980393f, 0.27058823529411763f, 0.3f);
                 }
 
                 Console.instance.m_output.font = font;
