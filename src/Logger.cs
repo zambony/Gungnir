@@ -7,7 +7,7 @@ namespace Consol
 {
     internal static class Logger
     {
-        public static Color ErrorColor = new Color(0.749f, 0.380f, 0.416f);
+        public static Color ErrorColor = new Color(0.9686274509803922f, 0.49411764705882355f, 0.5372549019607843f);
         public static Color WarningColor = new Color(0.922f, 0.796f, 0.545f);
         public static Color GoodColor = new Color(0.639f, 0.745f, 0.549f);
 
