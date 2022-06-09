@@ -47,17 +47,29 @@ namespace Consol
         {
             Font font = Font.CreateDynamicFontFromOSFont("Consolas", s_fontSize);
             m_consoleStyle.wordWrap = true;
-            m_consoleStyle.fontSize = s_fontSize;
+            m_consoleStyle.fontSize = font.fontSize;
             m_consoleStyle.font = font;
             m_consoleStyle.normal.textColor = Color.white;
+            m_consoleStyle.richText = true;
 
             if (Console.instance != null)
             {
                 // Apply customization to the existing console.
+                Canvas canvas = Console.instance.gameObject.GetComponent<Canvas>();
+
+                // Ahh, crispy text.
+                if (canvas != null)
+                {
+                    canvas.pixelPerfect = true;
+                    canvas.planeDistance = 0;  // not really necessary since we're going to screenspace, but just in case.
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;  // do this last so the text objects refresh with pixelPerfect enabled.
+                }
+
                 Console.instance.m_output.font = font;
-                Console.instance.m_output.fontSize = s_fontSize;
+                Console.instance.m_output.fontSize = font.fontSize;
                 Console.instance.m_output.color = Color.white;
                 Console.instance.m_input.textComponent.font = font;
+                Console.instance.m_input.textComponent.fontSize = font.fontSize;
                 Console.instance.m_input.caretColor = Color.white;
                 Console.instance.m_input.customCaretColor = true;
 
@@ -102,6 +114,7 @@ namespace Consol
             else if (Console.instance == null)
             {
                 m_foundConsoleInstance = false;
+                return;
             }
 
             if (!m_foundChatInstance && Chat.instance != null)
@@ -131,12 +144,6 @@ namespace Consol
 
             if (Console.IsVisible())
             {
-                if (!Cursor.visible)
-                {
-                    Cursor.lockState = CursorLockMode.None;
-                    Cursor.visible = true;
-                }
-
                 m_currentText = Console.instance.m_input.text;
 
                 if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
@@ -144,7 +151,7 @@ namespace Consol
                     if (!string.IsNullOrEmpty(m_currentText))
                     {
                         // Log this command to history.
-                        m_commandHistory.Add(m_currentText);
+                        m_commandHistory.Add(Util.StripTags(m_currentText));
                         // Delete the currently tracked text.
                         m_currentText = string.Empty;
                         // After a command is entered, cycling to through recent history entries should
@@ -154,17 +161,18 @@ namespace Consol
                     }
                 }
                 // Don't continue going through past entries if they're already at the top.
-                else if (Input.GetKeyDown(KeyCode.UpArrow) && (m_historyIndex - 1) >= 0)
-                {
-                    m_historyIndex = Math.Max(m_historyIndex - 1, 0);
-                    SetInputText(m_commandHistory[m_historyIndex]);
-                }
-                // Same as above, we can't scroll into the future.
-                else if (Input.GetKeyDown(KeyCode.DownArrow) && (m_historyIndex + 1) <= (m_commandHistory.Count - 1))
-                {
-                    m_historyIndex = Math.Min(m_historyIndex + 1, m_commandHistory.Count - 1);
-                    SetInputText(m_commandHistory[m_historyIndex]);
-                }
+                // Current console has history already, but eh keep this around.
+                //else if (Input.GetKeyDown(KeyCode.UpArrow) && (m_historyIndex - 1) >= 0)
+                //{
+                //    m_historyIndex = Math.Max(m_historyIndex - 1, 0);
+                //    SetInputText(m_commandHistory[m_historyIndex]);
+                //}
+                //// Same as above, we can't scroll into the future.
+                //else if (Input.GetKeyDown(KeyCode.DownArrow) && (m_historyIndex + 1) <= (m_commandHistory.Count - 1))
+                //{
+                //    m_historyIndex = Math.Min(m_historyIndex + 1, m_commandHistory.Count - 1);
+                //    SetInputText(m_commandHistory[m_historyIndex]);
+                //}
             }
             else
             {
@@ -183,6 +191,12 @@ namespace Consol
 
         private void DrawConsole(int windowID)
         {
+            if (!Cursor.visible)
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+
             GUILayout.Space(s_fontSize);
 
             GUILayout.FlexibleSpace();

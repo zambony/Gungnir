@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace Consol
 {
@@ -9,6 +10,8 @@ namespace Consol
     /// </summary>
     internal static class Util
     {
+        private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
+
         /// <summary>
         /// Find a <see cref="Player"/> by their name. Case insensitive, and allows partial matches.
         /// </summary>
@@ -114,6 +117,13 @@ namespace Consol
                 }
                 else if (toType == typeof(string))
                     return value;
+                else if (toType == typeof(bool))
+                {
+                    if (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("1", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                    else
+                        return false;
+                }
 
                 return Convert.ChangeType(value, toType);
             }
@@ -151,6 +161,27 @@ namespace Consol
                 default:
                     return type.Name;
             }
+        }
+
+        public static string StripTags(string input)
+        {
+            return s_tagStripPattern.Replace(input, (Match match) =>
+            {
+                return match.Groups[2].Value;
+            });
+        }
+
+        public static string AsText<T>(this List<T> input)
+        {
+            string value = $"List<{typeof(T).Name}>(";
+
+            foreach (var item in input)
+                value += item.ToString() + ",";
+
+            value = value.Remove(value.Length - 1);
+            value += ")";
+
+            return value;
         }
     }
 }

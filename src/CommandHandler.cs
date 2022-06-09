@@ -16,11 +16,13 @@ namespace Consol
     {
         public readonly string keyword;
         public readonly string description;
+        public readonly string autoCompleteTarget;
 
-        public Command(string keyword, string description)
+        public Command(string keyword, string description, string autoComplete = null)
         {
             this.keyword = keyword;
             this.description = description;
+            this.autoCompleteTarget = autoComplete;
         }
     }
 
@@ -29,6 +31,8 @@ namespace Consol
     /// </summary>
     internal class CommandMeta
     {
+        public delegate List<string> AutoCompleteDelegate();
+
         /// <summary>
         /// <see cref="Command"/> attribute data to access the command name and description.
         /// </summary>
@@ -50,12 +54,17 @@ namespace Consol
         /// Number of required arguments for the command to run.
         /// </summary>
         public readonly int requiredArguments;
+        /// <summary>
+        /// Function to return potential autocomplete topics.
+        /// </summary>
+        public readonly AutoCompleteDelegate AutoComplete;
 
-        public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments)
+        public CommandMeta(Command data, MethodBase method, List<ParameterInfo> arguments, AutoCompleteDelegate autoCompleteDelegate = null)
         {
             this.data = data;
             this.method = method;
             this.arguments = arguments;
+            this.AutoComplete = autoCompleteDelegate;
 
             if (arguments.Count > 0)
             {
@@ -70,7 +79,10 @@ namespace Consol
                     if (!optional)
                         builder.Append($"<{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}> ");
                     else
-                        builder.Append($"[{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}={info.DefaultValue}] ");
+                    {
+                        string defaultValue = info.DefaultValue == null ? "none" : info.DefaultValue.ToString();
+                        builder.Append($"[{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}={defaultValue}] ");
+                    }
                 }
 
                 // Remove trailing space.
@@ -99,10 +111,99 @@ namespace Consol
             Register();
         }
 
-        [Command("test", "Tests if the mod works.")]
-        public void Test(string text)
+        public static List<string> GetPrefabNames()
         {
-            Logger.Log("You said: " + text, true);
+            if (ZNetScene.instance != null)
+                return ZNetScene.instance.GetPrefabNames();
+            else
+                return null;
+        }
+
+        [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]
+        public void Give(string itemName, int amount = 1, Player player = null, int level = 1)
+        {
+            if (amount <= 0)
+            {
+                Logger.Error("Amount must be greater than 0", true);
+                return;
+            }
+
+            if (level <= 0)
+            {
+                Logger.Error("Level must be greater than 0", true);
+                return;
+            }
+
+            if (player == null)
+                player = Player.m_localPlayer;
+
+            string prefab = null;
+
+            foreach (string prefabName in ZNetScene.instance.GetPrefabNames())
+            {
+                // Check for exact match first, and then find a best case match if possible.
+                if (prefabName.Equals(itemName, StringComparison.OrdinalIgnoreCase))
+                {
+                    prefab = prefabName;
+                    break;
+                }
+                else if (prefabName.IndexOf(itemName, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (prefab != null)
+                    {
+                        Logger.Error($"Found more than one item containing the text '<color=white>{itemName}</color>', please be more specific", true);
+                        return;
+                    }
+
+                    prefab = prefabName;
+                }
+            }
+
+            GameObject prefabObject = ZNetScene.instance.GetPrefab(prefab);
+
+            if (prefabObject.GetComponent<ItemDrop>() == null)
+            {
+                Logger.Error($"Found a prefab named '<color=white>{prefab}</color>', but that isn't an item", true);
+                return;
+            }
+
+            Vector3 vector = UnityEngine.Random.insideUnitSphere * 0.5f;
+            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Spawning object " + itemName);
+
+            GameObject spawned = UnityEngine.Object.Instantiate(prefabObject, player.transform.position + player.transform.forward * 2f + Vector3.up + vector, Quaternion.identity);
+
+            if (spawned == null)
+            {
+                Logger.Error("Something went wrong!", true);
+                return;
+            }
+            else
+            {
+                string green = ColorUtility.ToHtmlStringRGB(Logger.GoodColor);
+                Logger.Log(
+                    $"Gave <color=#{green}>{amount}</color> of <color=#{green}>{prefab}</color> to <color=#{green}>{player.GetPlayerName()}</color>", true);
+            }
+
+            ItemDrop item = spawned.GetComponent<ItemDrop>();
+
+            item.m_itemData.m_quality = level;
+            item.m_itemData.m_stack = amount;
+            item.m_itemData.m_durability = item.m_itemData.GetMaxDurability();
+
+            player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
+        }
+
+        private CommandMeta.AutoCompleteDelegate MakeAutoCompleteDelegate(string method)
+        {
+            if (string.IsNullOrEmpty(method))
+                return null;
+
+            var target = typeof(CommandHandler).GetMethod(method);
+
+            if (target != null)
+                return target.CreateDelegate(typeof(CommandMeta.AutoCompleteDelegate)) as CommandMeta.AutoCompleteDelegate;
+
+            return null;
         }
 
         /// <summary>
@@ -114,7 +215,12 @@ namespace Consol
             IEnumerable<CommandMeta> query =
                 from method in typeof(CommandHandler).GetMethods()
                 from attribute in method.GetCustomAttributes().OfType<Command>()
-                select new CommandMeta(attribute, method, method.GetParameters().ToList());
+                select new CommandMeta(
+                    attribute,
+                    method,
+                    method.GetParameters().ToList(),
+                    MakeAutoCompleteDelegate(attribute.autoCompleteTarget)
+                );
 
             Logger.Log($"Registering {query.Count()} commands...");
 
@@ -131,10 +237,15 @@ namespace Consol
                 else
                     helpText = command.data.description;
 
+                Terminal.ConsoleOptionsFetcher fetcher = null;
+
+                if (command.AutoComplete != null)
+                    fetcher = new Terminal.ConsoleOptionsFetcher(command.AutoComplete);
+
                 new Terminal.ConsoleCommand("/" + command.data.keyword, helpText, delegate (Terminal.ConsoleEventArgs args)
                 {
                     ParseAndRun(args.FullLine);
-                });
+                }, optionsFetcher: fetcher);
                 Logger.Log($"Registered command {command.data.keyword}");
             }
 
@@ -165,13 +276,13 @@ namespace Consol
             // Look up the command value, fail if it doesn't exist.
             if (!m_actions.TryGetValue(commandName, out CommandMeta command))
             {
-                Logger.Error($"Unknown command '{commandName}'", true);
+                Logger.Error($"Unknown command '<color=white>{commandName}</color>'", true);
                 return;
             }
 
             if (args.Count < command.requiredArguments)
             {
-                Logger.Error($"Missing required number of arguments for '{commandName}'", true);
+                Logger.Error($"Missing required number of arguments for '<color=white>{commandName}</color>'", true);
                 return;
             }
 
@@ -183,19 +294,31 @@ namespace Consol
             // cast from object -> the parameter type.
             for (int i = 0; i < command.arguments.Count; ++i)
             {
-                Type argType = command.arguments[i].ParameterType;
-                string arg = args[i];
-
-                object converted = Util.StringToObject(arg, argType);
-
-                // Couldn't convert, oh well!
-                if (converted == null)
+                // If there is a user supplied value, try to convert it.
+                if (i < args.Count)
                 {
-                    Logger.Error($"Error while converting arguments for command '{commandName}'", true);
-                    return;
-                }
+                    Type argType = command.arguments[i].ParameterType;
+                    string arg = args[i];
 
-                convertedArgs.Add(converted);
+                    object converted = Util.StringToObject(arg, argType);
+
+                    // Couldn't convert, oh well!
+                    if (converted == null)
+                    {
+                        Logger.Error($"Error while converting arguments for command '<color=white>{commandName}</color>'", true);
+                        return;
+                    }
+
+                    convertedArgs.Add(converted);
+                }
+                // Otherwise, if we're still iterating, there's parameters they left unfilled.
+                // This will only execute if they are optional parameters, due to our required arg count check earlier.
+                else
+                {
+                    // Since Invoke requires all parameters to be filled, we have to manually insert the function's default value.
+                    // Very silly.
+                    convertedArgs.Add(command.arguments[i].DefaultValue);
+                }
             }
 
             // Invoke the method, which will expand all the arguments automagically.
