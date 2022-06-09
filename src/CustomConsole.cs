@@ -5,6 +5,7 @@ using System.Text;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 namespace Consol
 {
@@ -13,7 +14,6 @@ namespace Consol
         private const int s_maxHistory = 200;
         private List<string> m_history = new List<string>();
         private List<string> m_commandHistory = new List<string>();
-        private int m_historyIndex = 0;
         private Vector2 m_scrollPosition = new Vector2(0, int.MaxValue);
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         private string m_currentText = string.Empty;
@@ -26,6 +26,21 @@ namespace Consol
         private const int s_historyEntryMargin = 8;
 
         public CommandHandler Handler { get => m_handler; set => m_handler = value; }
+
+        public void ClearScreen()
+        {
+            IEnumerator clear()
+            {
+                yield return null;
+                m_history.Clear();
+            }
+
+            m_history.Clear();
+
+            // Coroutine to wait a frame and clear later, since this may have come
+            // from a console command, which would leave /clear on the screen, etc.
+            StartCoroutine(clear());
+        }
 
         private List<string> GetConsoleBuffer()
         {
@@ -71,7 +86,7 @@ namespace Consol
 
                 if (background != null)
                 {
-                    background.color = new Color(0.19607843137254902f, 0.21568627450980393f, 0.27058823529411763f, 0.3f);
+                    background.color = new Color(0.19607843137254902f, 0.21568627450980393f, 0.27058823529411763f, 0.5f);
                 }
 
                 Console.instance.m_output.font = font;
@@ -163,29 +178,8 @@ namespace Consol
                         m_commandHistory.Add(Util.StripTags(m_currentText));
                         // Delete the currently tracked text.
                         m_currentText = string.Empty;
-                        // After a command is entered, cycling to through recent history entries should
-                        // start back from the most recent entry. Set to Count, not Count - 1, because the first time we
-                        // subtract index it should grab the most recent entry at Count - 1.
-                        m_historyIndex = m_commandHistory.Count;
                     }
                 }
-                // Don't continue going through past entries if they're already at the top.
-                // Current console has history already, but eh keep this around.
-                //else if (Input.GetKeyDown(KeyCode.UpArrow) && (m_historyIndex - 1) >= 0)
-                //{
-                //    m_historyIndex = Math.Max(m_historyIndex - 1, 0);
-                //    SetInputText(m_commandHistory[m_historyIndex]);
-                //}
-                //// Same as above, we can't scroll into the future.
-                //else if (Input.GetKeyDown(KeyCode.DownArrow) && (m_historyIndex + 1) <= (m_commandHistory.Count - 1))
-                //{
-                //    m_historyIndex = Math.Min(m_historyIndex + 1, m_commandHistory.Count - 1);
-                //    SetInputText(m_commandHistory[m_historyIndex]);
-                //}
-            }
-            else
-            {
-                m_historyIndex = m_commandHistory.Count;
             }
         }
 

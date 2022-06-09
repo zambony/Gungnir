@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using UnityEngine;
+using System.Collections;
 
 namespace Consol
 {
@@ -105,6 +106,9 @@ namespace Consol
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
         private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
+        private CustomConsole m_console;
+
+        public CustomConsole Console { get => m_console; set => m_console = value; }
 
         public CommandHandler() : base()
         {
@@ -117,6 +121,15 @@ namespace Consol
                 return ZNetScene.instance.GetPrefabNames();
             else
                 return null;
+        }
+
+        [Command("clear", "Clears the console's output")]
+        public void ClearConsole()
+        {
+            if (Console)
+            {
+                Console.ClearScreen();
+            }
         }
 
         [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]

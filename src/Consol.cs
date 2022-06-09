@@ -35,7 +35,9 @@ namespace Consol
         {
             m_console = new GameObject("Consol");
             m_console.AddComponent<CustomConsole>();
-            m_console.GetComponent<CustomConsole>().Handler = m_handler;
+            CustomConsole guiConsole = m_console.GetComponent<CustomConsole>();
+            guiConsole.Handler = m_handler;
+            m_handler.Console = guiConsole;
 
             DontDestroyOnLoad(gameObject);
             transform.parent = null;
