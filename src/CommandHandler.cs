@@ -168,7 +168,7 @@ namespace Consol
             }
 
             Vector3 vector = UnityEngine.Random.insideUnitSphere * 0.5f;
-            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Spawning object " + itemName);
+            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Spawning object " + prefab);
 
             GameObject spawned = UnityEngine.Object.Instantiate(prefabObject, player.transform.position + player.transform.forward * 2f + Vector3.up + vector, Quaternion.identity);
 
