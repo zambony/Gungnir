@@ -16,7 +16,7 @@ namespace Consol
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
-        private GameObject       m_console;
+        private CustomConsole    m_console;
 
         void Awake()
         {
@@ -33,11 +33,10 @@ namespace Consol
 
         void Start()
         {
-            m_console = new GameObject("Consol");
-            m_console.AddComponent<CustomConsole>();
-            CustomConsole guiConsole = m_console.GetComponent<CustomConsole>();
-            guiConsole.Handler = m_handler;
-            m_handler.Console = guiConsole;
+            // Console object is a component so that it can think n stuff.
+            m_console = gameObject.AddComponent<CustomConsole>();
+            m_console.Handler = m_handler;
+            m_handler.Console = m_console;
 
             DontDestroyOnLoad(gameObject);
             transform.parent = null;

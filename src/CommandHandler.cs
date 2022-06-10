@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using UnityEngine;
-using System.Collections;
 
 namespace Consol
 {
@@ -56,7 +55,7 @@ namespace Consol
         /// </summary>
         public readonly int requiredArguments;
         /// <summary>
-        /// Function to return potential autocomplete topics.
+        /// Delegate to return potential autocomplete topics.
         /// </summary>
         public readonly AutoCompleteDelegate AutoComplete;
 
@@ -67,6 +66,7 @@ namespace Consol
             this.arguments = arguments;
             this.AutoComplete = autoCompleteDelegate;
 
+            // If we have any arguments, attempt to build the argument hint string.
             if (arguments.Count > 0)
             {
                 StringBuilder builder = new StringBuilder();
@@ -77,8 +77,11 @@ namespace Consol
 
                     requiredArguments += optional ? 0 : 1;
 
+                    // Required parameters use chevrons, and optionals use brackets.
                     if (!optional)
+                    {
                         builder.Append($"<{Util.GetSimpleTypeName(info.ParameterType)} {info.Name}> ");
+                    }
                     else
                     {
                         string defaultValue = info.DefaultValue == null ? "none" : info.DefaultValue.ToString();
@@ -106,16 +109,16 @@ namespace Consol
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
         private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
+        private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         private CustomConsole m_console;
 
         public CustomConsole Console { get => m_console; set => m_console = value; }
 
-        public CommandHandler() : base()
-        {
-            Register();
-        }
-
-        public static List<string> GetPrefabNames()
+        /// <summary>
+        /// Helper function for the give command's autocomplete feature.
+        /// </summary>
+        /// <returns>A <see cref="List{string}"/> of all prefab names if the Scene is loaded, otherwise <see langword="null"/>.</returns>
+        private static List<string> GetPrefabNames()
         {
             if (ZNetScene.instance != null)
                 return ZNetScene.instance.GetPrefabNames();
@@ -126,10 +129,7 @@ namespace Consol
         [Command("clear", "Clears the console's output")]
         public void ClearConsole()
         {
-            if (Console)
-            {
-                Console.ClearScreen();
-            }
+            Console?.ClearScreen();
         }
 
         [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]
@@ -152,6 +152,7 @@ namespace Consol
 
             string prefab = null;
 
+            /// TODO: Refactor the core of this into a helper method to find items.
             foreach (string prefabName in ZNetScene.instance.GetPrefabNames())
             {
                 // Check for exact match first, and then find a best case match if possible.
@@ -185,7 +186,7 @@ namespace Consol
 
             GameObject spawned = UnityEngine.Object.Instantiate(prefabObject, player.transform.position + player.transform.forward * 2f + Vector3.up + vector, Quaternion.identity);
 
-            if (spawned == null)
+            if (!spawned)
             {
                 Logger.Error("Something went wrong!", true);
                 return;
@@ -206,12 +207,25 @@ namespace Consol
             player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
         }
 
-        private CommandMeta.AutoCompleteDelegate MakeAutoCompleteDelegate(string method)
+        // Please do not edit below this line unless you really need to.
+        // Thanks.
+
+        public CommandHandler() : base()
+        {
+            Register();
+        }
+
+        /// <summary>
+        /// Helper method to create a <see cref="CommandMeta.AutoCompleteDelegate"/> function for autocomplete handlers.
+        /// </summary>
+        /// <param name="method">Name of the method attached to the <see cref="CommandHandler"/> class that will provide autocomplete values.</param>
+        /// <returns>A <see cref="CommandMeta.AutoCompleteDelegate"/> if the <paramref name="method"/> exists, otherwise <see langword="null"/>.</returns>
+        private static CommandMeta.AutoCompleteDelegate MakeAutoCompleteDelegate(string method)
         {
             if (string.IsNullOrEmpty(method))
                 return null;
 
-            var target = typeof(CommandHandler).GetMethod(method);
+            var target = typeof(CommandHandler).GetMethod(method, s_bindingFlags);
 
             if (target != null)
                 return target.CreateDelegate(typeof(CommandMeta.AutoCompleteDelegate)) as CommandMeta.AutoCompleteDelegate;

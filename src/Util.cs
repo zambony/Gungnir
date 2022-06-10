@@ -119,7 +119,9 @@ namespace Consol
                     return value;
                 else if (toType == typeof(bool))
                 {
-                    if (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("1", StringComparison.OrdinalIgnoreCase))
+                    if (value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                        value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                        value.Equals("yes", StringComparison.OrdinalIgnoreCase))
                         return true;
                     else
                         return false;
@@ -163,6 +165,11 @@ namespace Consol
             }
         }
 
+        /// <summary>
+        /// Strips away any markdown tags such as b, i, color, etc. from Text label input.
+        /// </summary>
+        /// <param name="input">Text to sanitize.</param>
+        /// <returns>A <see langword="string"/> containing the sanitized text.</returns>
         public static string StripTags(string input)
         {
             return s_tagStripPattern.Replace(input, (Match match) =>
@@ -171,6 +178,12 @@ namespace Consol
             });
         }
 
+        /// <summary>
+        /// Extension method to convert a list object to a nicely formatted string, since <see cref="List{T}.ToString"/> isn't helpful.
+        /// </summary>
+        /// <typeparam name="T">List type.</typeparam>
+        /// <param name="input">List to convert to text.</param>
+        /// <returns>A formatted <see langword="string"/> of the list's contents and type.</returns>
         public static string AsText<T>(this List<T> input)
         {
             string value = $"List<{typeof(T).Name}>(";
