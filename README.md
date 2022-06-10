@@ -10,9 +10,20 @@ Below is a list of features planned for the mod. Checked items are currently imp
 - [x] Advanced command processing.
 - [x] Debug logging.
 - [ ] Basic utility/administration commands.
-- [ ] New console GUI.
+- [x] New console theme.
 - [ ] Console history/scrolling.
-- [ ] Command history.
+- [ ] Autocomplete for each argument of a command (if applicable).
+
+### Technical To-Do
+For a more technical view of what's planned, refer to this list. These may or may not include end-user features, and is just a general list of things I'd like to
+incorporate into the mod, or change about the implementation.
+
+- [ ] Use GUI components rather than OnGUI drawing functions.
+	- [ ] Selectable console text. Currently, GUILayout functions don't have a good way to accomplish this.
+	- [ ] Patch `Console` class methods to redirect to new GUI elements (Print, updateSearch).
+	- [ ] Custom auto-complete text handler.
+- [ ] Better error message handling. Utility functions should not be printing anything. Specific exceptions should be thrown, or an error context object should be given as an output parameter.
+- [ ] More commands.
 
 ## Building
 If you'd prefer to build Consol yourself rather than use the available binary, download the repository and open the .sln file in Visual Studio.  
@@ -21,8 +32,9 @@ Valheim relies on the .NET Framework version 4.7.2, so you may need to install t
 Before you can build, this mod relies on the following library (.dll) files:
 - BepInEx
 - 0Harmony
+- All unstripped DLLs provided by BepInEx for Valheim
 - assembly_valheim
-- UnityEngine
+- assembly_utils
 
 These files should not be distributed by third parties, so you will need to locate them yourself. The last two can be found in your Valheim game installation folder.
 
