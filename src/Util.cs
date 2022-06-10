@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Consol
 {
@@ -195,6 +196,11 @@ namespace Consol
             value += ")";
 
             return value;
+        }
+
+        public static string WithColor(this string text, Color color)
+        {
+            return $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{text}</color>";
         }
     }
 }

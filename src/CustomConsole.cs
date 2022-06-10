@@ -104,7 +104,11 @@ namespace Consol
                 Image background = Console.instance.gameObject.GetComponentInChildren<Image>(true);
 
                 if (background)
-                    background.color = new Color(0.19607843137254902f, 0.21568627450980393f, 0.27058823529411763f, 0.5f);
+                {
+                    ColorUtility.TryParseHtmlString("#2A2F3A", out Color color);
+                    color.a = 0.65f;
+                    background.color = color;
+                }
 
                 Console.instance.m_output.font = font;
                 Console.instance.m_output.fontSize = font.fontSize;

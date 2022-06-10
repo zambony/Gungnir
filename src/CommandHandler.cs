@@ -120,30 +120,59 @@ namespace Consol
         /// <returns>A <see cref="List{string}"/> of all prefab names if the Scene is loaded, otherwise <see langword="null"/>.</returns>
         private static List<string> GetPrefabNames()
         {
-            if (ZNetScene.instance != null)
-                return ZNetScene.instance.GetPrefabNames();
-            else
-                return null;
+            return ZNetScene.instance?.GetPrefabNames();
         }
 
-        [Command("clear", "Clears the console's output")]
+        [Command("clear", "Clears the console's output.")]
         public void ClearConsole()
         {
             Console?.ClearScreen();
         }
 
+        [Command("creative", "Toggles creative mode, which removes the need for resources.")]
+        public void ToggleNoCost()
+        {
+            bool enabled = Player.m_localPlayer.ToggleNoPlacementCost();
+
+            if (!enabled && !Player.m_localPlayer.IsDebugFlying())
+                Player.m_debugMode = false;
+            else
+                Player.m_debugMode = true;
+
+            Logger.Log($"Creative mode: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
+        [Command("fly", "Toggles the ability to fly.")]
+        public void ToggleFly()
+        {
+            bool enabled = Player.m_localPlayer.ToggleDebugFly();
+
+            if (!enabled && !Player.m_localPlayer.NoCostCheat())
+                Player.m_debugMode = false;
+            else
+                Player.m_debugMode = true;
+
+            Logger.Log($"Flight: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
         [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]
         public void Give(string itemName, int amount = 1, Player player = null, int level = 1)
         {
+            if (string.IsNullOrEmpty(itemName))
+            {
+                Logger.Error("You must specify a name.", true);
+                return;
+            }
+
             if (amount <= 0)
             {
-                Logger.Error("Amount must be greater than 0", true);
+                Logger.Error("Amount must be greater than 0.", true);
                 return;
             }
 
             if (level <= 0)
             {
-                Logger.Error("Level must be greater than 0", true);
+                Logger.Error("Level must be greater than 0.", true);
                 return;
             }
 
@@ -165,7 +194,7 @@ namespace Consol
                 {
                     if (prefab != null)
                     {
-                        Logger.Error($"Found more than one item containing the text '<color=white>{itemName}</color>', please be more specific", true);
+                        Logger.Error($"Found more than one item containing the text '<color=white>{itemName}</color>', please be more specific.", true);
                         return;
                     }
 
@@ -173,11 +202,17 @@ namespace Consol
                 }
             }
 
+            if (string.IsNullOrEmpty(prefab))
+            {
+                Logger.Error($"Couldn't find any items named '<color=white>{itemName}</color>'.", true);
+                return;
+            }
+
             GameObject prefabObject = ZNetScene.instance.GetPrefab(prefab);
 
             if (prefabObject.GetComponent<ItemDrop>() == null)
             {
-                Logger.Error($"Found a prefab named '<color=white>{prefab}</color>', but that isn't an item", true);
+                Logger.Error($"Found a prefab named '<color=white>{prefab}</color>', but that isn't an item.", true);
                 return;
             }
 
@@ -193,9 +228,8 @@ namespace Consol
             }
             else
             {
-                string green = ColorUtility.ToHtmlStringRGB(Logger.GoodColor);
                 Logger.Log(
-                    $"Gave <color=#{green}>{amount}</color> of <color=#{green}>{prefab}</color> to <color=#{green}>{player.GetPlayerName()}</color>", true);
+                    $"Gave {amount.ToString().WithColor(Logger.GoodColor)} of {prefab.WithColor(Logger.GoodColor)} to {player.GetPlayerName().WithColor(Logger.GoodColor)}.", true);
             }
 
             ItemDrop item = spawned.GetComponent<ItemDrop>();
@@ -205,6 +239,168 @@ namespace Consol
             item.m_itemData.m_durability = item.m_itemData.GetMaxDurability();
 
             player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
+        }
+
+        [Command("god", "Toggles invincibility.")]
+        public void ToggleGodmode()
+        {
+            Player.m_localPlayer.SetGodMode(!Player.m_localPlayer.InGodMode());
+            Logger.Log($"God mode: {(Player.m_localPlayer.InGodMode() ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
+        [Command("heal", "Heal all of your wounds.")]
+        public void Heal()
+        {
+            Player.m_localPlayer.Heal(Player.m_localPlayer.GetMaxHealth(), true);
+            Logger.Log("All wounds cured.", true);
+        }
+
+        [Command("nostamina", "Toggles infinite stamina.")]
+        public void ToggleStamina()
+        {
+            if (Player.m_localPlayer.m_runStaminaDrain > 0f)
+            {
+                Player.m_localPlayer.m_staminaRegenDelay = 0.05f;
+                Player.m_localPlayer.m_staminaRegen = 999f;
+                Player.m_localPlayer.m_runStaminaDrain = 0f;
+                Player.m_localPlayer.SetMaxStamina(9999f, true);
+            }
+            else
+            {
+                Player.m_localPlayer.m_staminaRegenDelay = 1f;
+                Player.m_localPlayer.m_staminaRegen = 5f;
+                Player.m_localPlayer.m_runStaminaDrain = 10f;
+                Player.m_localPlayer.SetMaxStamina(100f, true);
+            }
+
+            Logger.Log(
+                $"Infinite stamina: {(Player.m_localPlayer.m_runStaminaDrain <= 0f ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
+                true
+            );
+        }
+
+        [Command("removedrops", "Clears all item drops in a radius (meters).")]
+        public void RemoveDrops(int radius = 100)
+        {
+            ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
+
+            int count = 0;
+            foreach (ItemDrop item in items)
+            {
+                ZNetView component = item.GetComponent<ZNetView>();
+
+                if (component && Vector3.Distance(item.gameObject.transform.position, Player.m_localPlayer.gameObject.transform.position) <= radius)
+                {
+                    component.Destroy();
+                    ++count;
+                }
+            }
+
+            Logger.Log($"Removed {count.ToString().WithColor(Logger.GoodColor)} items within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+        }
+
+        [Command("repair", "Repairs every item in your inventory.")]
+        public void Repair()
+        {
+            List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>();
+            Player.m_localPlayer.GetInventory().GetWornItems(items);
+
+            foreach (var data in items)
+            {
+                data.m_durability = data.GetMaxDurability();
+            }
+
+            Logger.Log("All your items have been repaired.", true);
+        }
+
+        [Command("spawn", "Spawn a prefab/creature/item. If it's a creature, levelOrQuantity will set the level, or if it's an item, set the stack size.", nameof(GetPrefabNames))]
+        public void SpawnPrefab(string prefab, int levelOrQuantity = 1)
+        {
+            var netViews = UnityEngine.Object.FindObjectsOfType<ZNetView>();
+
+            if (netViews.Length == 0)
+            {
+                Logger.Error("Can't locate a base ZDO to use for network reference.");
+                return;
+            }
+
+            ZDO zdoManager = netViews[0].GetZDO();
+
+            if (string.IsNullOrEmpty(prefab))
+            {
+                Logger.Error("You must specify a name.", true);
+                return;
+            }
+
+            if (levelOrQuantity <= 0)
+            {
+                Logger.Error("Level/quantity to spawn must be greater than 0.", true);
+                return;
+            }
+
+            string targetPrefab = null;
+
+            foreach (string prefabName in ZNetScene.instance.GetPrefabNames())
+            {
+                // Check for exact match first, and then find a best case match if possible.
+                if (prefabName.Equals(prefab, StringComparison.OrdinalIgnoreCase))
+                {
+                    targetPrefab = prefabName;
+                    break;
+                }
+                else if (prefabName.IndexOf(prefab, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (targetPrefab != null)
+                    {
+                        Logger.Error($"Found more than one item containing the text '<color=white>{prefab}</color>', please be more specific.", true);
+                        return;
+                    }
+
+                    targetPrefab = prefabName;
+                }
+            }
+
+            if (string.IsNullOrEmpty(targetPrefab))
+            {
+                Logger.Error($"Couldn't find any prefabs named '<color=white>{prefab}</color>'.", true);
+                return;
+            }
+
+            GameObject prefabObject = ZNetScene.instance.GetPrefab(targetPrefab);
+
+            GameObject spawned = UnityEngine.Object.Instantiate(
+                prefabObject,
+                Player.m_localPlayer.transform.position + Player.m_localPlayer.transform.forward * 1.5f,
+                Quaternion.identity
+            );
+
+            if (!spawned)
+            {
+                Logger.Error("Something went wrong!", true);
+                return;
+            }
+
+            ZNetView netView = spawned.GetComponent<ZNetView>();
+
+            Character character = spawned.GetComponent<Character>();
+            ItemDrop item = spawned.GetComponent<ItemDrop>();
+
+            if (character)
+            {
+                character.SetLevel(Math.Min(levelOrQuantity, 10));
+            }
+            else if (item && item.m_itemData != null)
+            {
+                item.m_itemData.m_quality = 1;
+                item.m_itemData.m_durability = item.m_itemData.GetMaxDurability();
+                item.m_itemData.m_stack = levelOrQuantity;
+            }
+
+            netView.GetZDO().SetPGWVersion(zdoManager.GetPGWVersion());
+            zdoManager.Set("spawn_id", netView.GetZDO().m_uid);
+            zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
+
+            Logger.Log($"Spawned {targetPrefab.WithColor(Logger.GoodColor)}.", true);
         }
 
         // Please do not edit below this line unless you really need to.
