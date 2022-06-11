@@ -110,9 +110,11 @@ namespace Consol
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
         private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-        private CustomConsole m_console;
+        private CustomConsole m_console = null;
+        private Consol m_plugin = null;
 
         public CustomConsole Console { get => m_console; set => m_console = value; }
+        public Consol Plugin { get => m_plugin; set => m_plugin = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
@@ -255,7 +257,48 @@ namespace Consol
             Logger.Log("All wounds cured.", true);
         }
 
-        [Command("nostamina", "Toggles infinite stamina.")]
+        [Command("help", "Prints the command list, or looks up the syntax of a specific command.")]
+        public void Help(string commandName = null)
+        {
+            if (commandName == null)
+            {
+                m_console.Print($"\n[Consol] Version {Consol.ModVersion} by {Consol.ModOrg}\n");
+
+                int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length);
+
+                foreach (CommandMeta meta in m_actions.Values.OrderBy(m => m.data.keyword))
+                {
+                    // Not using logger because this doesn't need to be logged.
+                    if (meta.arguments.Count > 0)
+                        m_console.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
+                    else
+                        m_console.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.data.description}");
+                }
+            }
+            else
+            {
+                // Add the command prefix if they didn't add it.
+                if (!commandName.StartsWith("/"))
+                    commandName = "/" + commandName;
+
+                if (!m_actions.TryGetValue(commandName, out var meta))
+                {
+                    Logger.Log($"Sorry, couldn't find a Consol command named '{commandName}'.", true);
+                    return;
+                }
+
+                // Spacing between command text and output, for readability.
+                m_console.Print("");
+
+                if (meta.arguments.Count > 0)
+                    m_console.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
+                else
+                    m_console.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.data.description}");
+
+            }
+        }
+
+        [Command("nostam", "Toggles infinite stamina.")]
         public void ToggleStamina()
         {
             if (Player.m_localPlayer.m_runStaminaDrain > 0f)
@@ -277,6 +320,21 @@ namespace Consol
                 $"Infinite stamina: {(Player.m_localPlayer.m_runStaminaDrain <= 0f ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
                 true
             );
+        }
+
+        [Command("nores", "Toggle building restrictions. Allows you to place objects even when the preview is red.")]
+        public void ToggleBuildAnywhere()
+        {
+            Plugin.BuildAnywhere = !Plugin.BuildAnywhere;
+            Logger.Log($"Build placement restrictions: {(Plugin.BuildAnywhere ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
+        [Command("nosup", "Toggle the need for structural support.")]
+        public void ToggleNoSupport()
+        {
+            Plugin.NoStructuralSupport = !Plugin.NoStructuralSupport;
+            Logger.Log($"No structural support: {(Plugin.NoStructuralSupport ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
@@ -396,6 +454,9 @@ namespace Consol
                 item.m_itemData.m_stack = levelOrQuantity;
             }
 
+            // I don't know if this is necessary, the base game's spawn command doesn't do it.
+            // SkToolbox does it, seems like it's for networking reasons. I'll leave it here until I understand
+            // whether it's necessary or not.
             netView.GetZDO().SetPGWVersion(zdoManager.GetPGWVersion());
             zdoManager.Set("spawn_id", netView.GetZDO().m_uid);
             zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
@@ -447,7 +508,8 @@ namespace Consol
 
             Logger.Log($"Registering {query.Count()} commands...");
 
-            foreach (CommandMeta command in query)
+            // Iterate over commands in alphabetical order, so they're sorted nicely by the default help command.
+            foreach (CommandMeta command in query.OrderBy(m => m.data.keyword))
             {
                 /// TODO: Register with a custom prefix, maybe controlled by config?
                 /// Have to reload/reregister commands when prefix is changed I guess.

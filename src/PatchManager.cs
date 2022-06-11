@@ -11,6 +11,9 @@ namespace Consol.Patch
     /// </summary>
     internal static class PatchManager
     {
+        private static Consol s_plugin = null;
+        public static Consol Plugin { get => s_plugin; set => s_plugin = value; }
+
         [HarmonyPatch(typeof(Console), nameof(Console.IsConsoleEnabled))]
         public static class ConsoleEnablePatch
         {
@@ -38,7 +41,7 @@ namespace Consol.Patch
             }
         }
 
-        // Same as above.
+        // Same as above. Private method, can't target with nameof.
         [HarmonyPatch(typeof(GameCamera), "UpdateMouseCapture")]
         public static class MouseVisibilityPatch
         {
@@ -49,6 +52,52 @@ namespace Consol.Patch
                 {
                     Cursor.lockState = CursorLockMode.None;
                     Cursor.visible = true;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Location), nameof(Location.IsInsideNoBuildLocation))]
+        private static class BuildRestrictionPatch
+        {
+            private static bool Prefix(ref bool __result)
+            {
+                if (Plugin.BuildAnywhere)
+                {
+                    __result = false;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        // Private method, no nameof.
+        [HarmonyPatch(typeof(Player), "UpdatePlacementGhost")]
+        private static class BuildPlacementPatch
+        {
+            private static void Postfix(ref int ___m_placementStatus)
+            {
+                // 4 = Player.PlacementStatus.PrivateZone
+                if (Plugin.BuildAnywhere && Player.m_localPlayer && ___m_placementStatus != 4)
+                {
+                    ___m_placementStatus = 0;
+                }
+            }
+        }
+
+        // Private method, no nameof.
+        [HarmonyPatch(typeof(WearNTear), "UpdateSupport")]
+        private static class StructuralSupportPatch
+        {
+            private static bool Prefix(ref float ___m_support, ref ZNetView ___m_nview)
+            {
+                if (Plugin.NoStructuralSupport)
+                {
+                    ___m_support += ___m_support;
+                    ___m_nview.GetZDO().Set("support", ___m_support);
                     return false;
                 }
 

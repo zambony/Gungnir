@@ -68,6 +68,19 @@ namespace Consol
             typeof(Console).GetField("m_chatBuffer", s_bindingFlags).SetValue(Console.instance, buffer);
         }
 
+        public void Print(string text)
+        {
+            // Delay by a single frame because Valheim runs the command before printing the command you ran.
+            // This looks weird if the command is printing values, so...
+            IEnumerator print(string value)
+            {
+                yield return null;
+                m_history.Add(value);
+            }
+
+            StartCoroutine(print(text));
+        }
+
         private void Start()
         {
             DontDestroyOnLoad(gameObject);

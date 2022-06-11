@@ -18,8 +18,12 @@ namespace Consol
         private CommandHandler   m_handler = new CommandHandler();
         private CustomConsole    m_console;
 
+        public bool BuildAnywhere = false;
+        public bool NoStructuralSupport = false;
+
         void Awake()
         {
+            PatchManager.Plugin = this;
             ConfigManager.Init(Config);
             m_harmony.PatchAll(typeof(PatchManager).Assembly);
         }
@@ -37,6 +41,7 @@ namespace Consol
             m_console = gameObject.AddComponent<CustomConsole>();
             m_console.Handler = m_handler;
             m_handler.Console = m_console;
+            m_handler.Plugin  = this;
 
             DontDestroyOnLoad(gameObject);
             transform.parent = null;
