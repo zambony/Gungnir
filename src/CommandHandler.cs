@@ -181,45 +181,32 @@ namespace Consol
             if (player == null)
                 player = Player.m_localPlayer;
 
-            string prefab = null;
 
-            /// TODO: Refactor the core of this into a helper method to find items.
-            foreach (string prefabName in ZNetScene.instance.GetPrefabNames())
+            GameObject prefabObject;
+
+            try
             {
-                // Check for exact match first, and then find a best case match if possible.
-                if (prefabName.Equals(itemName, StringComparison.OrdinalIgnoreCase))
-                {
-                    prefab = prefabName;
-                    break;
-                }
-                else if (prefabName.IndexOf(itemName, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (prefab != null)
-                    {
-                        Logger.Error($"Found more than one item containing the text '<color=white>{itemName}</color>', please be more specific.", true);
-                        return;
-                    }
-
-                    prefab = prefabName;
-                }
+                prefabObject = Util.GetPrefabByName(itemName);
             }
-
-            if (string.IsNullOrEmpty(prefab))
+            catch (TooManyValuesException)
             {
-                Logger.Error($"Couldn't find any items named '<color=white>{itemName}</color>'.", true);
+                Logger.Error($"Found more than one prefab containing the text <color=white>{itemName}</color>, please be more specific.", true);
+                return;
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find any prefabs named <color=white>{itemName}</color>.", true);
                 return;
             }
 
-            GameObject prefabObject = ZNetScene.instance.GetPrefab(prefab);
-
             if (prefabObject.GetComponent<ItemDrop>() == null)
             {
-                Logger.Error($"Found a prefab named '<color=white>{prefab}</color>', but that isn't an item.", true);
+                Logger.Error($"Found a prefab named <color=white>{itemName}</color>, but that isn't an item.", true);
                 return;
             }
 
             Vector3 vector = UnityEngine.Random.insideUnitSphere * 0.5f;
-            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Spawning object " + prefab);
+            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Spawning object " + prefabObject.name);
 
             GameObject spawned = UnityEngine.Object.Instantiate(prefabObject, player.transform.position + player.transform.forward * 2f + Vector3.up + vector, Quaternion.identity);
 
@@ -228,17 +215,15 @@ namespace Consol
                 Logger.Error("Something went wrong!", true);
                 return;
             }
-            else
-            {
-                Logger.Log(
-                    $"Gave {amount.ToString().WithColor(Logger.GoodColor)} of {prefab.WithColor(Logger.GoodColor)} to {player.GetPlayerName().WithColor(Logger.GoodColor)}.", true);
-            }
 
             ItemDrop item = spawned.GetComponent<ItemDrop>();
 
             item.m_itemData.m_quality = level;
             item.m_itemData.m_stack = amount;
             item.m_itemData.m_durability = item.m_itemData.GetMaxDurability();
+
+            Logger.Log(
+                $"Gave {amount.ToString().WithColor(Logger.GoodColor)} of {prefabObject.name.WithColor(Logger.GoodColor)} to {player.GetPlayerName().WithColor(Logger.GoodColor)}.", true);
 
             player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
         }
@@ -262,7 +247,7 @@ namespace Consol
         {
             if (commandName == null)
             {
-                m_console.Print($"\n[Consol] Version {Consol.ModVersion} by {Consol.ModOrg}\n");
+                global::Console.instance.Print($"\n[Consol] Version {Consol.ModVersion} by {Consol.ModOrg}\n");
 
                 int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length);
 
@@ -270,9 +255,9 @@ namespace Consol
                 {
                     // Not using logger because this doesn't need to be logged.
                     if (meta.arguments.Count > 0)
-                        m_console.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
+                        global::Console.instance.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
                     else
-                        m_console.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.data.description}");
+                        global::Console.instance.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.data.description}");
                 }
             }
             else
@@ -283,17 +268,17 @@ namespace Consol
 
                 if (!m_actions.TryGetValue(commandName, out var meta))
                 {
-                    Logger.Log($"Sorry, couldn't find a Consol command named '{commandName}'.", true);
+                    Logger.Error($"Sorry, couldn't find a Consol command named {commandName.WithColor(Color.white)}.", true);
                     return;
                 }
 
                 // Spacing between command text and output, for readability.
-                m_console.Print("");
+                global::Console.instance.Print("");
 
                 if (meta.arguments.Count > 0)
-                    m_console.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
+                    global::Console.instance.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
                 else
-                    m_console.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.data.description}");
+                    global::Console.instance.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.data.description}");
 
             }
         }
@@ -326,7 +311,7 @@ namespace Consol
         public void ToggleBuildAnywhere()
         {
             Plugin.BuildAnywhere = !Plugin.BuildAnywhere;
-            Logger.Log($"Build placement restrictions: {(Plugin.BuildAnywhere ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+            Logger.Log($"No build restrictions: {(Plugin.BuildAnywhere ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("nosup", "Toggle the need for structural support.")]
@@ -396,35 +381,22 @@ namespace Consol
                 return;
             }
 
-            string targetPrefab = null;
+            GameObject prefabObject;
 
-            foreach (string prefabName in ZNetScene.instance.GetPrefabNames())
+            try
             {
-                // Check for exact match first, and then find a best case match if possible.
-                if (prefabName.Equals(prefab, StringComparison.OrdinalIgnoreCase))
-                {
-                    targetPrefab = prefabName;
-                    break;
-                }
-                else if (prefabName.IndexOf(prefab, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    if (targetPrefab != null)
-                    {
-                        Logger.Error($"Found more than one item containing the text '<color=white>{prefab}</color>', please be more specific.", true);
-                        return;
-                    }
-
-                    targetPrefab = prefabName;
-                }
+                prefabObject = Util.GetPrefabByName(prefab);
             }
-
-            if (string.IsNullOrEmpty(targetPrefab))
+            catch (TooManyValuesException)
             {
-                Logger.Error($"Couldn't find any prefabs named '<color=white>{prefab}</color>'.", true);
+                Logger.Error($"Found more than one prefab containing the text <color=white>{prefab}</color>, please be more specific.", true);
                 return;
             }
-
-            GameObject prefabObject = ZNetScene.instance.GetPrefab(targetPrefab);
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find any prefabs named <color=white>{prefab}</color>.", true);
+                return;
+            }
 
             GameObject spawned = UnityEngine.Object.Instantiate(
                 prefabObject,
@@ -461,7 +433,7 @@ namespace Consol
             zdoManager.Set("spawn_id", netView.GetZDO().m_uid);
             zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
 
-            Logger.Log($"Spawned {targetPrefab.WithColor(Logger.GoodColor)}.", true);
+            Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
         }
 
         // Please do not edit below this line unless you really need to.
@@ -561,13 +533,13 @@ namespace Consol
             // Look up the command value, fail if it doesn't exist.
             if (!m_actions.TryGetValue(commandName, out CommandMeta command))
             {
-                Logger.Error($"Unknown command '<color=white>{commandName}</color>'", true);
+                Logger.Error($"Unknown command <color=white>{commandName}</color>", true);
                 return;
             }
 
             if (args.Count < command.requiredArguments)
             {
-                Logger.Error($"Missing required number of arguments for '<color=white>{commandName}</color>'", true);
+                Logger.Error($"Missing required number of arguments for <color=white>{commandName}</color>", true);
                 return;
             }
 
@@ -585,12 +557,29 @@ namespace Consol
                     Type argType = command.arguments[i].ParameterType;
                     string arg = args[i];
 
-                    object converted = Util.StringToObject(arg, argType);
+                    object converted = null;
+
+                    try
+                    {
+                        converted = Util.StringToObject(arg, argType);
+                    }
+                    catch (SystemException e)
+                    {
+                        Logger.Error($"System error while converting <color=white>{arg}</color> to <color=white>{argType.Name}</color>: {e.Message}");
+                    }
+                    catch (TooManyValuesException e)
+                    {
+                        Logger.Error($"Found more than one {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
+                    }
+                    catch (NoMatchFoundException e)
+                    {
+                        Logger.Error($"Couldn't find a {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
+                    }
 
                     // Couldn't convert, oh well!
                     if (converted == null)
                     {
-                        Logger.Error($"Error while converting arguments for command '<color=white>{commandName}</color>'", true);
+                        Logger.Error($"Error while converting arguments for command <color=white>{commandName}</color>.", true);
                         return;
                     }
 

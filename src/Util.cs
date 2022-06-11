@@ -6,6 +6,30 @@ using UnityEngine;
 
 namespace Consol
 {
+    [Serializable]
+    internal class TooManyValuesException : Exception
+    {
+        public int expected;
+        public int actual;
+
+        public TooManyValuesException(int expected, int actual) : base($"Too many values found, expected {expected}, got {actual}")
+        {
+            this.expected = expected;
+            this.actual = actual;
+        }
+    }
+
+    [Serializable]
+    internal class NoMatchFoundException : Exception
+    {
+        public string key;
+
+        public NoMatchFoundException(string key) : base($"No match found for key: {key}")
+        {
+            this.key = key;
+        }
+    }
+
     /// <summary>
     /// Collection of utility functions to find players, trim text, and do basic tasks.
     /// </summary>
@@ -17,20 +41,20 @@ namespace Consol
         /// Find a <see cref="Player"/> by their name. Case insensitive, and allows partial matches.
         /// </summary>
         /// <param name="name">Name of the player to lookup, or the start of their name to try for a partial match.</param>
-        /// <param name="foundMultiple"><see langword="true"/> if there were multiple matches for the query, <see langword="false"/> if not.</param>
+        /// <param name="noThrow">True to not throw an exception if the search fails, false if you'd like failure info.</param>
         /// <returns>
         /// <see cref="Player"/> found by the search, or <see langword="null"/> if no player with that name could be found or there were
         /// too many matches found.
         /// </returns>
-        public static Player GetPlayerByName(string name, out bool foundMultiple)
+        /// <exception cref="NoMatchFoundException"></exception>
+        /// <exception cref="TooManyValuesException"></exception>
+        public static Player GetPlayerByName(string name, bool noThrow = false)
         {
-            foundMultiple = false;
-
             try
             {
                 var query =
                     from player in Player.GetAllPlayers()
-                    where player.GetPlayerName().ToLower().Simplified().StartsWith(name.ToLower())
+                    where player.GetPlayerName().Simplified().StartsWith(name.ToLower(), StringComparison.OrdinalIgnoreCase)
                     select player;
 
                 if (query.Count() > 1)
@@ -39,18 +63,23 @@ namespace Consol
                     // to find the exact match. If there's no exact match, the intent is unclear and we shouldn't process it.
                     foreach (Player player in query)
                     {
-                        if (player.GetPlayerName().ToLower().Simplified().Equals(name.ToLower()))
+                        if (player.GetPlayerName().Simplified().Equals(name.ToLower(), StringComparison.OrdinalIgnoreCase))
                             return player;
                     }
 
-                    foundMultiple = true;
+                    if (!noThrow)
+                        throw new TooManyValuesException(1, query.Count());
+
                     return null;
                 }
 
                 return query.First();
             }
-            catch (Exception)
+            catch (SystemException)
             {
+                if (!noThrow)
+                    throw new NoMatchFoundException(name);
+
                 return null;
             }
         }
@@ -73,6 +102,42 @@ namespace Consol
         }
 
         /// <summary>
+        /// Find a prefab by name. Case insensitive. Prioritizes exact matches, but will find partials.
+        /// </summary>
+        /// <param name="name">Name to find.</param>
+        /// <param name="noThrow">True to disable exceptions, false otherwise.</param>
+        /// <returns>A <see cref="GameObject"/> if one was foumdo otherwise <see langword="null"/>.</returns>
+        /// <exception cref="NoMatchFoundException"></exception>
+        /// <exception cref="TooManyValuesException"></exception>
+        public static GameObject GetPrefabByName(string name, bool noThrow = false)
+        {
+            IEnumerable<string> query =
+                from prefabName in ZNetScene.instance.GetPrefabNames()
+                where prefabName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
+                orderby prefabName.Length
+                select prefabName;
+
+            int count = query.Count();
+
+            if (count <= 0)
+            {
+                if (!noThrow)
+                    throw new NoMatchFoundException(name);
+            }
+            else
+            {
+                string first = query.First();
+
+                if (first.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return ZNetScene.instance.GetPrefab(first);
+                else if (!noThrow)
+                    throw new TooManyValuesException(1, count);
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Trims leading and trailing spaces, and collapses repeating spaces to a single space.
         /// </summary>
         /// <param name="value"><see langword="string"/> to clean up.</param>
@@ -87,8 +152,15 @@ namespace Consol
         /// </summary>
         /// <param name="value">Text to convert to some object.</param>
         /// <param name="toType"><see cref="Type"/> value to convert to.</param>
+        /// <param name="noThrow">Whether to throw conversion exceptions or not.</param>
         /// <returns>An <see langword="object"/> reference to the converted type.</returns>
-        public static object StringToObject(string value, Type toType)
+        /// <exception cref="InvalidCastException"/>
+        /// <exception cref="FormatException"/>
+        /// <exception cref="OverflowException"/>
+        /// <exception cref="ArgumentNullException"/>
+        /// <exception cref="TooManyValuesException"/>
+        /// <exception cref="NoMatchFoundException"/>
+        public static object StringToObject(string value, Type toType, bool noThrow = false)
         {
             try
             {
@@ -100,20 +172,7 @@ namespace Consol
                     }
                     else
                     {
-                        Player player = GetPlayerByName(value, out bool foundMultiple);
-
-                        if (player != null)
-                            return player;
-                        else if (foundMultiple)
-                        {
-                            Logger.Error($"Found multiple players with the name '{value}'", true);
-                            return null;
-                        }
-                        else
-                        {
-                            Logger.Error($"No player named '{value}'", true);
-                            return null;
-                        }
+                        return GetPlayerByName(value, noThrow);
                     }
                 }
                 else if (toType == typeof(string))
@@ -130,9 +189,11 @@ namespace Consol
 
                 return Convert.ChangeType(value, toType);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Logger.Error($"Failed to convert '{value}' to type '{toType}': {e.Message}", true);
+                if (!noThrow)
+                    throw;
+
                 return null;
             }
         }
@@ -198,6 +259,12 @@ namespace Consol
             return value;
         }
 
+        /// <summary>
+        /// Extension method to create markup color tags around a string.
+        /// </summary>
+        /// <param name="text">Text to wrap with color tags.</param>
+        /// <param name="color"><see cref="Color"/> to use for the tag. Alpha is ignored.</param>
+        /// <returns>A <see langword="string"/> wrapped with color tags.</returns>
         public static string WithColor(this string text, Color color)
         {
             return $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{text}</color>";
