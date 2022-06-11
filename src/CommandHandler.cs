@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Reflection;
 using UnityEngine;
 
-namespace Consol
+namespace Gungnir
 {
     /// <summary>
     /// Attribute to be applied to a method for use by the command handler.
@@ -111,10 +111,10 @@ namespace Consol
         private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         private CustomConsole m_console = null;
-        private Consol m_plugin = null;
+        private Gungnir m_plugin = null;
 
         public CustomConsole Console { get => m_console; set => m_console = value; }
-        public Consol Plugin { get => m_plugin; set => m_plugin = value; }
+        public Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
@@ -247,7 +247,7 @@ namespace Consol
         {
             if (commandName == null)
             {
-                global::Console.instance.Print($"\n[Consol] Version {Consol.ModVersion} by {Consol.ModOrg}\n");
+                global::Console.instance.Print($"\n[Gungnir] Version {Gungnir.ModVersion} by {Gungnir.ModOrg}\n");
 
                 int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length);
 
@@ -268,7 +268,7 @@ namespace Consol
 
                 if (!m_actions.TryGetValue(commandName, out var meta))
                 {
-                    Logger.Error($"Sorry, couldn't find a Consol command named {commandName.WithColor(Color.white)}.", true);
+                    Logger.Error($"Sorry, couldn't find a command named {commandName.WithColor(Color.white)}.", true);
                     return;
                 }
 

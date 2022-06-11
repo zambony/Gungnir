@@ -1,7 +1,7 @@
 ﻿using BepInEx.Configuration;
 using System.Collections.Generic;
 
-namespace Consol
+namespace Gungnir
 {
     internal static class ConfigManager
     {

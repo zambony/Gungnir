@@ -3,7 +3,7 @@ using UnityEngine;
 using System.IO;
 using System.Text.RegularExpressions;
 
-namespace Consol
+namespace Gungnir
 {
     internal static class Logger
     {
@@ -37,13 +37,13 @@ namespace Consol
             {
                 string tagColor = "87E3FF";
                 string msgColor = ColorUtility.ToHtmlStringRGBA(GetLogColor(type));
-                Console.instance.Print($"<color=#{tagColor}>[Consol]</color> <color=#{msgColor}>{message}</color>");
+                Console.instance.Print($"<color=#{tagColor}>[Gungnir]</color> <color=#{msgColor}>{message}</color>");
             }
 
             // Strip out color tags for printing to console.
             message = Util.StripTags(message);
 
-            Debug.unityLogger.Log(type, $"[Consol:{Path.GetFileName(filePath)}:{lineNumber}] {message}");
+            Debug.unityLogger.Log(type, $"[Gungnir:{Path.GetFileName(filePath)}:{lineNumber}] {message}");
         }
 
         public static void Log(string message,

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 using System.Collections;
 using HarmonyLib;
 
-namespace Consol
+namespace Gungnir
 {
     internal class CustomConsole : MonoBehaviour
     {

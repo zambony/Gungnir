@@ -1,15 +1,15 @@
 ﻿using BepInEx;
 using HarmonyLib;
 using UnityEngine;
-using Consol.Patch;
+using Gungnir.Patch;
 
-namespace Consol
+namespace Gungnir
 {
     [BepInPlugin(ModGUID, ModName, ModVersion)]
     [BepInProcess("valheim.exe")]
-    public class Consol : BaseUnityPlugin
+    public class Gungnir : BaseUnityPlugin
     {
-        public const string ModName    = "Consol";
+        public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
         public const string ModVersion = "1.0.0";

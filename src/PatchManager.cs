@@ -2,7 +2,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace Consol.Patch
+namespace Gungnir.Patch
 {
     /// <summary>
     /// Organizational section to store any patches that need to be made. Most patches should go here, but
@@ -11,8 +11,8 @@ namespace Consol.Patch
     /// </summary>
     internal static class PatchManager
     {
-        private static Consol s_plugin = null;
-        public static Consol Plugin { get => s_plugin; set => s_plugin = value; }
+        private static Gungnir s_plugin = null;
+        public static Gungnir Plugin { get => s_plugin; set => s_plugin = value; }
 
         [HarmonyPatch(typeof(Console), nameof(Console.IsConsoleEnabled))]
         public static class ConsoleEnablePatch
