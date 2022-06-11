@@ -17,7 +17,7 @@ namespace Consol
         // GUI Style values.
         private const int s_maxHistory = 200;
         private const int s_fontSize = 16;
-        private const int s_historyEntryMargin = 8;
+        private const int s_historyEntryMargin = 10;
         private GUIStyle m_consoleStyle = new GUIStyle();
 
         // History-related value.

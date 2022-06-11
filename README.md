@@ -1,18 +1,21 @@
 # Consol
-Consol is a work-in-progress mod for the Unity game Valheim. It aims to replicate the functionality of the existing mod, SkToolbox,
-but with a simpler approach to creating commands.
+Consol is a mod for the Unity game Valheim. It aims to replicate the functionality of the existing mod, SkToolbox,
+but with a simpler approach to creating commands and a more straightforward code base.
 
-Consol intends to be a replacement for the default in-game console by offering a new set of commands, better visuals, history, scrolling, and more.
+Consol enhances the default in-game console by offering a new set of commands, better visuals, scrolling, and more.
 
 ## Features
 Below is a list of features planned for the mod. Checked items are currently implemented, while unchecked ones are still in-progress.
 
 - [x] Advanced command processing.
 - [x] Debug logging.
-- [ ] Basic utility/administration commands.
+- [x] Basic utility/administration commands.
 - [x] New console theme.
-- [ ] Console history/scrolling.
+- [x] Console history/scrolling.
 - [ ] Autocomplete for each argument of a command (if applicable).
+
+## Screenshots
+![Preview](https://i.imgur.com/iwBCxGH.png)
 
 ### Technical To-Do
 For a more technical view of what's planned, refer to this list. These may or may not include end-user features, and is just a general list of things I'd like to
@@ -22,10 +25,10 @@ incorporate into the mod, or change about the implementation.
 	- [ ] Selectable console text. Currently, GUILayout functions don't have a good way to accomplish this.
 	- [ ] Patch `Console` class methods to redirect to new GUI elements (Print, updateSearch).
 	- [ ] Custom auto-complete text handler.
-- [ ] Better error message handling. Utility functions should not be printing anything. Specific exceptions should be thrown, or an error context object should be given as an output parameter.
-- [ ] More commands.
+- [x] Better error message handling. Utility functions should not be printing anything. Specific exceptions should be thrown, or an error context object should be given as an output parameter.
+- [ ] API for other mods to register commands?
 
-## Building
+## Building from Source
 If you'd prefer to build Consol yourself rather than use the available binary, download the repository and open the .sln file in Visual Studio.  
 Valheim relies on the .NET Framework version 4.7.2, so you may need to install that.
 

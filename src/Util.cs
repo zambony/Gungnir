@@ -128,7 +128,8 @@ namespace Consol
             {
                 string first = query.First();
 
-                if (first.Equals(name, StringComparison.OrdinalIgnoreCase))
+                // Test if we have just one result, or the first result is an exact match.
+                if (count == 1 || first.Equals(name, StringComparison.OrdinalIgnoreCase))
                     return ZNetScene.instance.GetPrefab(first);
                 else if (!noThrow)
                     throw new TooManyValuesException(1, count);
