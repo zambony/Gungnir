@@ -39,7 +39,8 @@ namespace Gungnir
 
         public int MaxHistory { get => s_maxHistory; }
         public float Height { get => m_windowRect.height;  }
-        public int VisibleLines { get => (int)(m_windowRect.height / (s_fontSize + s_historyEntryMargin)); }
+        public float LineHeight { get => m_consoleStyle.CalcHeight(GUIContent.none, m_windowRect.width); }
+        public int VisibleLines { get => (int)(((m_windowRect.height - LineHeight) / (LineHeight + s_historyEntryMargin))); }
 
         public void ClearScreen()
         {

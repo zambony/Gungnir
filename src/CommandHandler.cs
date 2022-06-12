@@ -251,16 +251,17 @@ namespace Gungnir
 
             if (commandOrPageNum == null || wantsPage)
             {
-                int totalPages = Math.Max((m_actions.Count * 3) / Console.VisibleLines, 1);
-                int entriesPerPage = (Console.VisibleLines / 3);
+                int totalPages = Math.Max((int)Math.Ceiling((m_actions.Count * 3f) / Console.VisibleLines), 1);
+                int entriesPerPage = (int)Math.Ceiling(Console.VisibleLines / 3f);
 
                 if (pageNum > totalPages)
                 {
-                    Logger.Error($"Max number of help pages is {totalPages}.");
+                    Logger.Error($"Max number of help pages is {totalPages}.", true);
                     return;
                 }
 
-                global::Console.instance.Print($"\n[Gungnir] Version {Gungnir.ModVersion} by {Gungnir.ModOrg}\n");
+                if (!wantsPage || pageNum == 1)
+                    global::Console.instance.Print($"\n[Gungnir] Version {Gungnir.ModVersion} by {Gungnir.ModOrg}\n");
 
                 if (wantsPage)
                     global::Console.instance.Print($"Page ({pageNum}/{totalPages})\n");
@@ -268,11 +269,11 @@ namespace Gungnir
                 int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length) + 1;
 
                 int pageStart = (pageNum - 1) * entriesPerPage;
-                int pageEnd = Math.Min(pageStart + entriesPerPage, m_actions.Count - 1);
 
                 var cmds =
                     m_actions.Values.ToList()
-                    .GetRange(pageStart, wantsPage ? pageEnd : m_actions.Count - 1)
+                    .Skip(pageStart)
+                    .Take(wantsPage ? entriesPerPage : m_actions.Count)
                     .OrderBy(m => m.data.keyword);
 
                 foreach (CommandMeta meta in cmds)
@@ -506,6 +507,11 @@ namespace Gungnir
                 );
 
             Logger.Log($"Registering {query.Count()} commands...");
+
+            for (int i = 0; i < 20; ++i)
+            {
+                m_actions.Add("dummy" + i, query.First());
+            }
 
             // Iterate over commands in alphabetical order, so they're sorted nicely by the default help command.
             foreach (CommandMeta command in query.OrderBy(m => m.data.keyword))
