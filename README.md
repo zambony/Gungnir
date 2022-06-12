@@ -1,8 +1,8 @@
-# Consol
-Consol is a mod for the Unity game Valheim. It aims to replicate the functionality of the existing mod, SkToolbox,
+# Gungnir
+Gungnir is a mod for the Unity game Valheim. It aims to replicate the functionality of the existing mod, SkToolbox,
 but with a simpler approach to creating commands and a more straightforward code base.
 
-Consol enhances the default in-game console by offering a new set of commands, better visuals, scrolling, and more.
+Gungnir enhances the default in-game console by offering a new set of commands, better visuals, scrolling, and more.
 
 ## Features
 Below is a list of features planned for the mod. Checked items are currently implemented, while unchecked ones are still in-progress.
@@ -29,7 +29,7 @@ incorporate into the mod, or change about the implementation.
 - [ ] API for other mods to register commands?
 
 ## Building from Source
-If you'd prefer to build Consol yourself rather than use the available binary, download the repository and open the .sln file in Visual Studio.  
+If you'd prefer to build Gungnir yourself rather than use the available binary, download the repository and open the .sln file in Visual Studio.  
 Valheim relies on the .NET Framework version 4.7.2, so you may need to install that.
 
 Before you can build, this mod relies on the following library (.dll) files:
@@ -51,8 +51,8 @@ Once you have these files:
 Now the project should be ready to build!
 1. Change the build configuration to "Release", if it isn't already.
 2. Click "Build" from the top of Visual Studio.
-3. Click "Build Consol".
+3. Click "Build Gungnir".
 
 Alternatively, instead of steps 2-3, just press CTRL+B.
 
-You now have a `Consol.dll` file to use as you please, located under `bin/Release/Consol.dll`. Install like you would any other BepInEx plugin.
+You now have a `Gungnir.dll` file to use as you please, located under `bin/Release/Gungnir.dll`. Install like you would any other BepInEx plugin.
