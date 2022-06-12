@@ -242,33 +242,60 @@ namespace Gungnir
             Logger.Log("All wounds cured.", true);
         }
 
-        [Command("help", "Prints the command list, or looks up the syntax of a specific command.")]
-        public void Help(string commandName = null)
+        [Command("help", "Prints the command list, or looks up the syntax of a specific command. Also accepts a page number, in case of many commands.")]
+        public void Help(string commandOrPageNum = null)
         {
-            if (commandName == null)
+            int pageNum = 1;
+            bool wantsPage = int.TryParse(commandOrPageNum, out pageNum);
+            pageNum = Math.Max(pageNum, 1);
+
+            if (commandOrPageNum == null || wantsPage)
             {
+                int totalPages = Math.Max((m_actions.Count * 3) / Console.VisibleLines, 1);
+                int entriesPerPage = (Console.VisibleLines / 3);
+
+                if (pageNum > totalPages)
+                {
+                    Logger.Error($"Max number of help pages is {totalPages}.");
+                    return;
+                }
+
                 global::Console.instance.Print($"\n[Gungnir] Version {Gungnir.ModVersion} by {Gungnir.ModOrg}\n");
 
-                int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length);
+                if (wantsPage)
+                    global::Console.instance.Print($"Page ({pageNum}/{totalPages})\n");
 
-                foreach (CommandMeta meta in m_actions.Values.OrderBy(m => m.data.keyword))
+                int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length) + 1;
+
+                int pageStart = (pageNum - 1) * entriesPerPage;
+                int pageEnd = Math.Min(pageStart + entriesPerPage, m_actions.Count - 1);
+
+                var cmds =
+                    m_actions.Values.ToList()
+                    .GetRange(pageStart, wantsPage ? pageEnd : m_actions.Count - 1)
+                    .OrderBy(m => m.data.keyword);
+
+                foreach (CommandMeta meta in cmds)
                 {
+                    string fullCommand = "/" + meta.data.keyword;
                     // Not using logger because this doesn't need to be logged.
                     if (meta.arguments.Count > 0)
-                        global::Console.instance.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
+                        global::Console.instance.Print($"{fullCommand.WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)}\n{meta.data.description}");
                     else
-                        global::Console.instance.Print($"{("/" + meta.data.keyword).PadRight(longestCommandLength + 1).WithColor(Logger.WarningColor)} {meta.data.description}");
+                        global::Console.instance.Print($"{fullCommand.WithColor(Logger.WarningColor)}\n{meta.data.description}");
+
+                    global::Console.instance.Print("");
                 }
             }
             else
             {
                 // Add the command prefix if they didn't add it.
-                if (!commandName.StartsWith("/"))
-                    commandName = "/" + commandName;
+                if (!commandOrPageNum.StartsWith("/"))
+                    commandOrPageNum = "/" + commandOrPageNum;
 
-                if (!m_actions.TryGetValue(commandName, out var meta))
+                if (!m_actions.TryGetValue(commandOrPageNum, out var meta))
                 {
-                    Logger.Error($"Sorry, couldn't find a command named {commandName.WithColor(Color.white)}.", true);
+                    Logger.Error($"Sorry, couldn't find a command named {commandOrPageNum.WithColor(Color.white)}.", true);
                     return;
                 }
 
@@ -276,9 +303,9 @@ namespace Gungnir
                 global::Console.instance.Print("");
 
                 if (meta.arguments.Count > 0)
-                    global::Console.instance.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)} - {meta.data.description}");
+                    global::Console.instance.Print($"{commandOrPageNum.WithColor(Logger.WarningColor)} {meta.hint.WithColor(Logger.GoodColor)}\n{meta.data.description}");
                 else
-                    global::Console.instance.Print($"{("/" + meta.data.keyword).WithColor(Logger.WarningColor)} {meta.data.description}");
+                    global::Console.instance.Print($"{commandOrPageNum.WithColor(Logger.WarningColor)}\n{meta.data.description}");
 
             }
         }

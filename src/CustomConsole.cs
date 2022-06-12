@@ -37,6 +37,10 @@ namespace Gungnir
         private CommandHandler m_handler;
         public CommandHandler Handler { get => m_handler; set => m_handler = value; }
 
+        public int MaxHistory { get => s_maxHistory; }
+        public float Height { get => m_windowRect.height;  }
+        public int VisibleLines { get => (int)(m_windowRect.height / (s_fontSize + s_historyEntryMargin)); }
+
         public void ClearScreen()
         {
             IEnumerator clear()
