@@ -160,6 +160,12 @@ namespace Gungnir
         [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]
         public void Give(string itemName, int amount = 1, Player player = null, int level = 1)
         {
+            if (!ZNetScene.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
             if (string.IsNullOrEmpty(itemName))
             {
                 Logger.Error("You must specify a name.", true);
@@ -251,8 +257,9 @@ namespace Gungnir
 
             if (commandOrPageNum == null || wantsPage)
             {
-                int totalPages = Math.Max((int)Math.Ceiling((m_actions.Count * 3f) / Console.VisibleLines), 1);
-                int entriesPerPage = (int)Math.Ceiling(Console.VisibleLines / 3f);
+                int usableLines = Console.VisibleLines - 2;  // subtracting 2 because we print out the Page counter and a newline.
+                int totalPages = Math.Max((int)Math.Ceiling((m_actions.Count * 3f) / usableLines), 1);
+                int entriesPerPage = (int)Math.Ceiling(usableLines / 3f);
 
                 if (pageNum > totalPages)
                 {
@@ -265,8 +272,6 @@ namespace Gungnir
 
                 if (wantsPage)
                     global::Console.instance.Print($"Page ({pageNum}/{totalPages})\n");
-
-                int longestCommandLength = m_actions.Values.Max(m => m.data.keyword.Length) + 1;
 
                 int pageStart = (pageNum - 1) * entriesPerPage;
 
@@ -308,6 +313,94 @@ namespace Gungnir
                 else
                     global::Console.instance.Print($"{commandOrPageNum.WithColor(Logger.WarningColor)}\n{meta.data.description}");
 
+            }
+        }
+
+        [Command("listitems", "List every item in the game, or search for one that contains your text.")]
+        public void ListItems(string itemName = null)
+        {
+            if (!ZNetScene.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
+            List<string> foundItems = new List<string>();
+
+            foreach (string prefabName in ZNetScene.instance.GetPrefabNames())
+            {
+                GameObject prefab = ZNetScene.instance.GetPrefab(prefabName);
+
+                ItemDrop item = prefab.GetComponent<ItemDrop>();
+
+                if (!item)
+                    continue;
+
+                if (itemName == null)
+                {
+                    foundItems.Add(prefabName);
+                    continue;
+                }
+
+                int index = prefabName.IndexOf(itemName, StringComparison.OrdinalIgnoreCase);
+
+                if (index == -1) continue;
+
+                string matchSub = prefabName.Substring(index, itemName.Length);
+                string match = prefabName.Replace(matchSub, matchSub.WithColor(Logger.GoodColor));
+                foundItems.Add(match);
+            }
+
+            if (foundItems.Count == 0)
+                Logger.Error($"Couldn't find any items containing the text {itemName.WithColor(Color.white)}.");
+            else
+            {
+                Logger.Log($"Found {foundItems.Count.ToString().WithColor(Logger.GoodColor)} items...", true);
+
+                foreach (string item in foundItems)
+                    global::Console.instance.Print(item);
+            }
+        }
+
+        [Command("listprefabs", "List every prefab in the game, or search for one that contains your text.")]
+        public void ListPrefabs(string prefabName = null)
+        {
+            if (!ZNetScene.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
+            List<string> foundPrefabs = new List<string>();
+
+            foreach (string name in ZNetScene.instance.GetPrefabNames())
+            {
+                GameObject prefab = ZNetScene.instance.GetPrefab(name);
+
+                if (prefabName == null)
+                {
+                    foundPrefabs.Add(name);
+                    continue;
+                }
+
+                int index = name.IndexOf(prefabName, StringComparison.OrdinalIgnoreCase);
+
+                if (index == -1)
+                    continue;
+
+                string matchSub = name.Substring(index, prefabName.Length);
+                string match = name.Replace(matchSub, matchSub.WithColor(Logger.GoodColor));
+                foundPrefabs.Add(match);
+            }
+
+            if (foundPrefabs.Count == 0)
+                Logger.Error($"Couldn't find any items containing the text {prefabName.WithColor(Color.white)}.");
+            else
+            {
+                Logger.Log($"Found {foundPrefabs.Count.ToString().WithColor(Logger.GoodColor)} prefabs...", true);
+
+                foreach (string item in foundPrefabs)
+                    global::Console.instance.Print(item);
             }
         }
 
@@ -387,6 +480,12 @@ namespace Gungnir
         [Command("spawn", "Spawn a prefab/creature/item. If it's a creature, levelOrQuantity will set the level, or if it's an item, set the stack size.", nameof(GetPrefabNames))]
         public void SpawnPrefab(string prefab, int levelOrQuantity = 1)
         {
+            if (!ZNetScene.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
             var netViews = UnityEngine.Object.FindObjectsOfType<ZNetView>();
 
             if (netViews.Length == 0)
@@ -508,11 +607,6 @@ namespace Gungnir
 
             Logger.Log($"Registering {query.Count()} commands...");
 
-            for (int i = 0; i < 20; ++i)
-            {
-                m_actions.Add("dummy" + i, query.First());
-            }
-
             // Iterate over commands in alphabetical order, so they're sorted nicely by the default help command.
             foreach (CommandMeta command in query.OrderBy(m => m.data.keyword))
             {
@@ -628,6 +722,7 @@ namespace Gungnir
                 }
             }
 
+            Logger.Log("Running command " + command.data.keyword);
             // Invoke the method, which will expand all the arguments automagically.
             command.method.Invoke(this, convertedArgs.ToArray());
         }
