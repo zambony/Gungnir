@@ -222,7 +222,7 @@ namespace Gungnir
             if (Console.IsVisible())
             {
                 // Not reassigning windowRect because we do not want to allow the user to drag the window.
-                GUILayout.Window(5001, m_windowRect, DrawConsole, "CONSOL", m_consoleStyle);
+                GUILayout.Window(5001, m_windowRect, DrawConsole, "Gungnir " + Gungnir.ModVersion, m_consoleStyle);
             }
         }
 
