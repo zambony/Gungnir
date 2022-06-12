@@ -15,7 +15,18 @@ Below is a list of features planned for the mod. Checked items are currently imp
 - [ ] Autocomplete for each argument of a command (if applicable).
 
 ## Screenshots
-![Preview](https://i.imgur.com/iwBCxGH.png)
+
+Helpful new commands.  
+![Overview](https://i.imgur.com/ODRz8Nb.png)
+<br>
+Succinct and visually pleasing command feedback.  
+![Feedback](https://i.imgur.com/GnlrVpx.png)
+<br>
+Integration with autocomplete, and partial matching.  
+![Autocomplete and partial matching](https://i.imgur.com/CSRKkEA.png)
+<br>
+Item/prefab searching.  
+![Searching](https://i.imgur.com/qPryHeQ.png)
 
 ### Technical To-Do
 For a more technical view of what's planned, refer to this list. These may or may not include end-user features, and is just a general list of things I'd like to
