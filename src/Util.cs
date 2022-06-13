@@ -36,6 +36,15 @@ namespace Gungnir
     internal static class Util
     {
         private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
+        private const string s_commandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
+
+        public static List<string> SplitByQuotes(string text)
+        {
+            return Regex.Matches(text, s_commandPattern)
+                .OfType<Match>()
+                .Select(m => m.Groups[0].Value)
+                .ToList();
+        }
 
         /// <summary>
         /// Find a <see cref="Player"/> by their name. Case insensitive, and allows partial matches.
@@ -199,6 +208,18 @@ namespace Gungnir
             }
         }
 
+        public static object[] StringsToObjects(string[] values, Type toType, bool noThrow = false)
+        {
+            object[] result = new object[values.Length];
+
+            for (int i = 0; i < result.Length; ++i)
+            {
+                result[i] = StringToObject(values[i], toType, noThrow);
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Translates a <see cref="Type"/> to a nice user-friendly name.
         /// </summary>
@@ -206,6 +227,9 @@ namespace Gungnir
         /// <returns><see langword="string"/> containing the type name.</returns>
         public static string GetSimpleTypeName(Type type)
         {
+            if (type.IsArray)
+                return GetSimpleTypeName(type.GetElementType()) + "[]";
+
             switch (type.Name)
             {
                 case nameof(Int32):

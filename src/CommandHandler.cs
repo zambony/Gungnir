@@ -108,7 +108,6 @@ namespace Gungnir
     internal class CommandHandler
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
-        private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         private CustomConsole m_console = null;
         private Gungnir m_plugin = null;
@@ -563,6 +562,13 @@ namespace Gungnir
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
         }
 
+        [Command("echo", "Shout into the void.")]
+        public void Echo(params string[] values)
+        {
+            foreach (string value in values)
+                global::Console.instance.Print(value);
+        }
+
         // Please do not edit below this line unless you really need to.
         // Thanks.
 
@@ -648,10 +654,7 @@ namespace Gungnir
             text = text.Simplified();
 
             // Split the text using our pattern. Splits by spaces but preserves quote groups.
-            List<string> args = Regex.Matches(text, CommandPattern)
-                                            .OfType<Match>()
-                                            .Select(m => m.Groups[0].Value)
-                                            .ToList();
+            List<string> args = Util.SplitByQuotes(text);
 
             // Store command ID and remove it from our arguments list.
             string commandName = args[0];
@@ -682,23 +685,32 @@ namespace Gungnir
                 if (i < args.Count)
                 {
                     Type argType = command.arguments[i].ParameterType;
+                    
                     string arg = args[i];
 
                     object converted = null;
 
                     try
                     {
-                        converted = Util.StringToObject(arg, argType);
+                        if (command.arguments[i].GetCustomAttribute(typeof(ParamArrayAttribute)) != null)
+                        {
+                            argType = argType.GetElementType();
+                            converted = Util.StringsToObjects(args.Skip(Math.Max(i - 1, 0)).ToArray(), argType);
+                        }
+                        else
+                        {
+                            converted = Util.StringToObject(arg, argType);
+                        }
                     }
                     catch (SystemException e)
                     {
                         Logger.Error($"System error while converting <color=white>{arg}</color> to <color=white>{argType.Name}</color>: {e.Message}");
                     }
-                    catch (TooManyValuesException e)
+                    catch (TooManyValuesException)
                     {
                         Logger.Error($"Found more than one {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
                     }
-                    catch (NoMatchFoundException e)
+                    catch (NoMatchFoundException)
                     {
                         Logger.Error($"Couldn't find a {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
                     }
@@ -710,7 +722,15 @@ namespace Gungnir
                         return;
                     }
 
-                    convertedArgs.Add(converted);
+                    if (converted.GetType().IsArray)
+                    {
+                        object[] arr = converted as object[];
+                        var things = Array.CreateInstance(argType, arr.Length);
+                        Array.Copy(arr, things, arr.Length);
+                        convertedArgs.Add(things);
+                    }
+                    else
+                        convertedArgs.Add(converted);
                 }
                 // Otherwise, if we're still iterating, there's parameters they left unfilled.
                 // This will only execute if they are optional parameters, due to our required arg count check earlier.
