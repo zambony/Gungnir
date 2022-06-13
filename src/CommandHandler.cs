@@ -124,6 +124,24 @@ namespace Gungnir
             return ZNetScene.instance?.GetPrefabNames();
         }
 
+        [Command("bind", "Bind a console command to a key. See the Unity documentation for KeyCode names.")]
+        public void Bind(string keyCode, params string[] commandText)
+        {
+            if (!Enum.TryParse(keyCode, true, out KeyCode result))
+            {
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.");
+                return;
+            }
+
+            if (Plugin.Binds.ContainsKey(result))
+                Plugin.Binds.Remove(result);
+
+            string cmd = string.Join(" ", commandText);
+            Plugin.Binds.Add(result, cmd);
+
+            Logger.Log($"Bound {keyCode.WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
+        }
+
         [Command("clear", "Clears the console's output.")]
         public void ClearConsole()
         {
@@ -141,6 +159,12 @@ namespace Gungnir
                 Player.m_debugMode = true;
 
             Logger.Log($"Creative mode: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
+        [Command("echo", "Shout into the void.")]
+        public void Echo(params string[] values)
+        {
+            global::Console.instance.Print(string.Join(" ", values));
         }
 
         [Command("fly", "Toggles the ability to fly.")]
@@ -562,13 +586,6 @@ namespace Gungnir
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
         }
 
-        [Command("echo", "Shout into the void.")]
-        public void Echo(params string[] values)
-        {
-            foreach (string value in values)
-                global::Console.instance.Print(value);
-        }
-
         // Please do not edit below this line unless you really need to.
         // Thanks.
 
@@ -695,7 +712,7 @@ namespace Gungnir
                         if (command.arguments[i].GetCustomAttribute(typeof(ParamArrayAttribute)) != null)
                         {
                             argType = argType.GetElementType();
-                            converted = Util.StringsToObjects(args.Skip(Math.Max(i - 1, 0)).ToArray(), argType);
+                            converted = Util.StringsToObjects(args.Skip(i).ToArray(), argType);
                         }
                         else
                         {
