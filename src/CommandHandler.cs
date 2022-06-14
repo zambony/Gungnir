@@ -464,12 +464,13 @@ namespace Gungnir
         [Command("nostam", "Toggles infinite stamina.")]
         public void ToggleStamina()
         {
-            if (Player.m_localPlayer.m_runStaminaDrain > 0f)
+            if (!Plugin.NoStamina)
             {
                 Player.m_localPlayer.m_staminaRegenDelay = 0.05f;
                 Player.m_localPlayer.m_staminaRegen = 999f;
                 Player.m_localPlayer.m_runStaminaDrain = 0f;
                 Player.m_localPlayer.SetMaxStamina(9999f, true);
+                Plugin.NoStamina = true;
             }
             else
             {
@@ -477,10 +478,11 @@ namespace Gungnir
                 Player.m_localPlayer.m_staminaRegen = 5f;
                 Player.m_localPlayer.m_runStaminaDrain = 10f;
                 Player.m_localPlayer.SetMaxStamina(100f, true);
+                Plugin.NoStamina = false;
             }
 
             Logger.Log(
-                $"Infinite stamina: {(Player.m_localPlayer.m_runStaminaDrain <= 0f ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
+                $"Infinite stamina: {(Plugin.NoStamina ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
                 true
             );
         }

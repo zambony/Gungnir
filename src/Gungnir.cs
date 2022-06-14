@@ -26,6 +26,7 @@ namespace Gungnir
 
         public bool BuildAnywhere       = false;
         public bool NoStructuralSupport = false;
+        public bool NoStamina           = false;
 
         public Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
 
