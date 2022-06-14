@@ -139,7 +139,9 @@ namespace Gungnir
             string cmd = string.Join(" ", commandText);
             Plugin.Binds.Add(result, cmd);
 
-            Logger.Log($"Bound {keyCode.WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
+            Plugin.SaveBinds();
+
+            Logger.Log($"Bound {result.ToString().WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
         }
 
         [Command("clear", "Clears the console's output.")]
@@ -337,6 +339,38 @@ namespace Gungnir
                     global::Console.instance.Print($"{commandOrPageNum.WithColor(Logger.WarningColor)}\n{meta.data.description}");
 
             }
+        }
+
+        [Command("listbinds", "List all of your custom keybinds, or check what an individual keycode is bound to.")]
+        public void ListBinds(string keyCode = null)
+        {
+            if (Plugin.Binds.Count == 0)
+            {
+                Logger.Error($"You have no keybinds currently set. Use {"/bind".WithColor(Color.white)} to add some.", true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(keyCode))
+            {
+                foreach (KeyValuePair<KeyCode, string> pair in Plugin.Binds)
+                    global::Console.instance.Print($"{pair.Key} = {pair.Value.WithColor(Logger.WarningColor)}");
+
+                return;
+            }
+
+            if (!Enum.TryParse(keyCode, true, out KeyCode result))
+            {
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            if (!Plugin.Binds.TryGetValue(result, out string cmd))
+            {
+                Logger.Error($"{keyCode.ToString().WithColor(Color.white)} is not bound to anything.", true);
+                return;
+            }
+
+            global::Console.instance.Print($"{result} = {cmd.WithColor(Logger.WarningColor)}");
         }
 
         [Command("listitems", "List every item in the game, or search for one that contains your text.")]
@@ -584,6 +618,27 @@ namespace Gungnir
             zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
 
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("unbind", "Removes a custom keybind.")]
+        public void Unbind(string keyCode)
+        {
+            if (!Enum.TryParse(keyCode, true, out KeyCode result))
+            {
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            if (!Plugin.Binds.ContainsKey(result))
+            {
+                Logger.Error($"{result.ToString().WithColor(Color.white)} is not bound to anything.", true);
+                return;
+            }
+
+            Plugin.Binds.Remove(result);
+            Plugin.SaveBinds();
+
+            Logger.Log($"Unbound {result.ToString().WithColor(Logger.GoodColor)}.", true);
         }
 
         // Please do not edit below this line unless you really need to.

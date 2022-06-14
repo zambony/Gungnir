@@ -3,6 +3,9 @@ using HarmonyLib;
 using UnityEngine;
 using System.Collections.Generic;
 using Gungnir.Patch;
+using System;
+using System.Text;
+using System.IO;
 
 namespace Gungnir
 {
@@ -26,10 +29,54 @@ namespace Gungnir
 
         public Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
 
+        /// <summary>
+        /// Save all of the user's console keybinds to a file in the BepInEx config folder.
+        /// </summary>
+        public void SaveBinds()
+        {
+            StringBuilder builder = new StringBuilder();
+
+            foreach (KeyValuePair<KeyCode, string> pair in m_binds)
+                builder.AppendLine($"{pair.Key}={pair.Value}");
+
+            string output = builder.ToString();
+            Debug.Log(output);
+
+            string path = Path.Combine(Paths.ConfigPath, ModGUID + "_binds.txt");
+            File.WriteAllText(path, output);
+        }
+
+        /// <summary>
+        /// Load the user's console keybinds from the file in the BepInEx config folder.
+        /// </summary>
+        public void LoadBinds()
+        {
+            string path = Path.Combine(Paths.ConfigPath, ModGUID + "_binds.txt");
+
+            if (!File.Exists(path))
+                return;
+
+            string[] lines = File.ReadAllLines(path);
+
+            foreach (string line in lines)
+            { 
+                string[] info = line.Trim().Split('=');
+
+                if (info.Length != 2)
+                    continue;
+
+                if (!Enum.TryParse(info[0].Trim(), true, out KeyCode key))
+                    continue;
+
+                m_binds.Add(key, info[1].Trim());
+            }
+        }
+
         void Awake()
         {
             PatchManager.Plugin = this;
             ConfigManager.Init(Config);
+            LoadBinds();
             m_harmony.PatchAll(typeof(PatchManager).Assembly);
         }
 
