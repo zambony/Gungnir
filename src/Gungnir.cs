@@ -61,7 +61,8 @@ namespace Gungnir
 
             foreach (string line in lines)
             { 
-                string[] info = line.Trim().Split('=');
+                // Only split by the first instance of equals.
+                string[] info = line.Trim().Split(new char[] {'='}, 1);
 
                 if (info.Length != 2)
                     continue;
