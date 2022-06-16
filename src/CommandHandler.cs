@@ -129,7 +129,7 @@ namespace Gungnir
         {
             if (!Enum.TryParse(keyCode, true, out KeyCode result))
             {
-                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.");
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.", true);
                 return;
             }
 
