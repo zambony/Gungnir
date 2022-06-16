@@ -14,7 +14,6 @@ namespace Gungnir
         public static void Init(ConfigFile config)
         {
             s_config.Add("ConsoleEnabled", config.Bind("General", "ConsoleEnabled", true, "Whether the console should be enabled or not. Defaults to true."));
-            s_config.Add("BindList", config.Bind("General", "BindList", "{}", "A JSON list of commands bound to key codes. Edit manually at your own peril."));
         }
 
         /// <summary>
