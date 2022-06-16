@@ -285,6 +285,44 @@ namespace Gungnir
         }
 
         /// <summary>
+        /// Helper to find a partial match from an enumerable collection.
+        /// </summary>
+        /// <param name="input">Collection to search through.</param>
+        /// <param name="key">Needle to find in the collection.</param>
+        /// <param name="noThrow">Whether exceptions should be thrown for specificity.</param>
+        /// <returns>A <see langword="string"/> with the found item, or <see langword="null"/> if nothing.</returns>
+        /// <exception cref="NoMatchFoundException"></exception>
+        /// <exception cref="TooManyValuesException"></exception>
+        public static string GetPartialMatch(IEnumerable<string> input, string key, bool noThrow = false)
+        {
+            IEnumerable<string> query =
+                            from item in input
+                            where item.StartsWith(key, StringComparison.OrdinalIgnoreCase)
+                            orderby item.Length
+                            select item;
+
+            int count = query.Count();
+
+            if (count <= 0)
+            {
+                if (!noThrow)
+                    throw new NoMatchFoundException(key);
+            }
+            else
+            {
+                string first = query.First();
+
+                // Test if we have just one result, or the first result is an exact match.
+                if (count == 1 || first.Equals(key, StringComparison.OrdinalIgnoreCase))
+                    return first;
+                else if (!noThrow)
+                    throw new TooManyValuesException(1, count);
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Extension method to create markup color tags around a string.
         /// </summary>
         /// <param name="text">Text to wrap with color tags.</param>

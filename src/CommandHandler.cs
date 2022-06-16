@@ -144,6 +144,27 @@ namespace Gungnir
             Logger.Log($"Bound {result.ToString().WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
         }
 
+        [Command("butcher", "Kills all living creatures within a radius, excluding players.")]
+        public void KillAll(float radius = 50f, bool killTamed = false)
+        {
+            List<Character> characters = new List<Character>();
+            Character.GetCharactersInRange(Player.m_localPlayer.transform.position, radius, characters);
+
+            int count = 0;
+            foreach (Character character in characters)
+            {
+                if (!character.IsPlayer() && !(character.IsTamed() && !killTamed))
+                {
+                    HitData hitData = new HitData();
+                    hitData.m_damage.m_damage = Mathf.Infinity;
+                    character.Damage(hitData);
+                    ++count;
+                }
+            }
+
+            Logger.Log($"Murdered {count.ToString().WithColor(Logger.GoodColor)} creatures within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+        }
+
         [Command("clear", "Clears the console's output.")]
         public void ClearConsole()
         {
@@ -259,6 +280,13 @@ namespace Gungnir
             player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
         }
 
+        [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
+        public void ToggleGhostMode()
+        {
+            Player.m_localPlayer.SetGhostMode(!Player.m_localPlayer.InGhostMode());
+            Logger.Log($"Ghost mode: {(Player.m_localPlayer.InGhostMode() ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
         [Command("god", "Toggles invincibility.")]
         public void ToggleGodmode()
         {
@@ -371,6 +399,25 @@ namespace Gungnir
             }
 
             global::Console.instance.Print($"{result} = {cmd.WithColor(Logger.WarningColor)}");
+        }
+
+        [Command("listweather", "Get a list of all available weather types.")]
+        public void ListWeather()
+        {
+            if (!EnvMan.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
+            var query =
+                from env in EnvMan.instance.m_environments
+                select env.m_name;
+
+            Logger.Log($"Found {query.Count().ToString().WithColor(Logger.GoodColor)} available weather types...", true);
+
+            foreach (string name in query)
+                global::Console.instance.Print(name);
         }
 
         [Command("listitems", "List every item in the game, or search for one that contains your text.")]
@@ -503,7 +550,7 @@ namespace Gungnir
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
-        public void RemoveDrops(int radius = 100)
+        public void RemoveDrops(float radius = 100f)
         {
             ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
 
@@ -622,6 +669,34 @@ namespace Gungnir
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
         }
 
+        [Command("time", "Overrides the time of day for you only (0 to 1 where 0.5 is noon). Set to a negative number to disable.")]
+        public void SetTime(float time)
+        {
+            if (!EnvMan.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
+            if (time >= 0f)
+            {
+                time = Mathf.Clamp01(time);
+                EnvMan.instance.m_debugTimeOfDay = true;
+                EnvMan.instance.m_debugTime = time;
+
+                float realTime = time * 24f;
+                int hour = (int)realTime;
+                int minutes = (int)((realTime - (int)realTime) * 60f);
+                string formatted = $"{hour.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}".WithColor(Logger.GoodColor);
+                Logger.Log($"Time set to {formatted}.", true);
+            }
+            else
+            {
+                EnvMan.instance.m_debugTimeOfDay = false;
+                Logger.Log("Time re-synchronized with the game.", true);
+            }
+        }
+
         [Command("unbind", "Removes a custom keybind.")]
         public void Unbind(string keyCode)
         {
@@ -641,6 +716,64 @@ namespace Gungnir
             Plugin.SaveBinds();
 
             Logger.Log($"Unbound {result.ToString().WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("unbindall", "Unbinds ALL of your Gungnir-related keybinds. Requires a true/1/yes as parameter to confirm you mean it.")]
+        public void UnbindAll(bool confirm)
+        {
+            if (!confirm)
+            {
+                Logger.Error("Your binds will continue to live...", true);
+                return;
+            }
+
+            Plugin.Binds.Clear();
+            Plugin.SaveBinds();
+
+            Logger.Log("All of your binds have been cleared.", true);
+        }
+
+        [Command("weather", "Overrides the weather for you only. Use -1 to clear the override.")]
+        public void SetWeather(string weatherType)
+        {
+            if (string.IsNullOrEmpty(weatherType))
+            {
+                Logger.Error("You must specify a weather type.", true);
+                return;
+            }
+
+            if (int.TryParse(weatherType, out int result))
+            {
+                if (result < 0)
+                {
+                    EnvMan.instance.m_debugEnv = string.Empty;
+                    Logger.Log("Weather re-synchronized with the game.", true);
+                    return;
+                }
+
+                Logger.Log("If you want to clear the forced weather, send a negative number next time.", true);
+                return;
+            }
+
+            string targetWeather = null;
+
+            try
+            {
+                targetWeather = Util.GetPartialMatch(EnvMan.instance.m_environments.Select(e => e.m_name), weatherType);
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find the weather type {weatherType.WithColor(Color.white)}.", true);
+                return;
+            }
+            catch (TooManyValuesException)
+            {
+                Logger.Error($"Found more than one weather type containing the text {weatherType.WithColor(Color.white)}, please be more specific.", true);
+                return;
+            }
+
+            EnvMan.instance.m_debugEnv = targetWeather;
+            Logger.Log($"Set weather type to {targetWeather.WithColor(Logger.GoodColor)}.", true);
         }
 
         // Please do not edit below this line unless you really need to.
