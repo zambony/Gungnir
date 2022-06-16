@@ -60,7 +60,7 @@ namespace Gungnir.Patch
         }
 
         [HarmonyPatch(typeof(Location), nameof(Location.IsInsideNoBuildLocation))]
-        private static class BuildRestrictionPatch
+        public static class BuildRestrictionPatch
         {
             private static bool Prefix(ref bool __result)
             {
@@ -76,7 +76,7 @@ namespace Gungnir.Patch
 
         // Private method, no nameof.
         [HarmonyPatch(typeof(Player), "UpdatePlacementGhost")]
-        private static class BuildPlacementPatch
+        public static class BuildPlacementPatch
         {
             private static void Postfix(ref int ___m_placementStatus)
             {
@@ -90,7 +90,7 @@ namespace Gungnir.Patch
 
         // Private method, no nameof.
         [HarmonyPatch(typeof(WearNTear), "UpdateSupport")]
-        private static class StructuralSupportPatch
+        public static class StructuralSupportPatch
         {
             private static bool Prefix(ref float ___m_support, ref ZNetView ___m_nview)
             {
@@ -98,6 +98,36 @@ namespace Gungnir.Patch
                 {
                     ___m_support += ___m_support;
                     ___m_nview.GetZDO().Set("support", ___m_support);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), "UseStamina")]
+        public static class UseStaminaPatch
+        {
+            private static bool Prefix(ref ZNetView ___m_nview, float ___m_maxStamina)
+            {
+                if (Plugin.NoStamina && ___m_nview.IsValid() && ___m_nview.IsOwner())
+                {
+                    ___m_nview.GetZDO().Set("stamina", ___m_maxStamina);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), "HaveStamina")]
+        public static class HaveStaminaPatch
+        {
+            private static bool Prefix(ref bool __result, ref ZNetView ___m_nview)
+            {
+                if (Plugin.NoStamina && ___m_nview.IsValid() && ___m_nview.IsOwner())
+                {
+                    __result = true;
                     return false;
                 }
 

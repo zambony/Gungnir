@@ -15,27 +15,27 @@ namespace Gungnir
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
         // GUI Style values.
-        private const int s_maxHistory = 200;
-        private const int s_fontSize = 16;
+        private const int s_maxHistory         = 200;
+        private const int s_fontSize           = 16;
         private const int s_historyEntryMargin = 10;
-        private GUIStyle m_consoleStyle = new GUIStyle();
+        private GUIStyle  m_consoleStyle       = new GUIStyle();
 
-        // History-related value.
-        private List<string> m_history = new List<string>();
+        // History-related values.
+        private List<string> m_history        = new List<string>();
         private List<string> m_commandHistory = new List<string>();
 
         // GUI drawing variables.
         private Vector2 m_scrollPosition = new Vector2(0, int.MaxValue);
-        private string m_currentText = string.Empty;
-        private Rect m_windowRect;
+        private string  m_currentText    = string.Empty;
+        private Rect    m_windowRect;
 
         // Flags.
         private bool m_foundConsoleInstance = false;
-        private bool m_foundChatInstance = false;
+        private bool m_foundChatInstance    = false;
 
         // Link to the command handler.
         private CommandHandler m_handler;
-        public CommandHandler Handler { get => m_handler; set => m_handler = value; }
+        public CommandHandler  Handler { get => m_handler; set => m_handler = value; }
 
         public int MaxHistory { get => s_maxHistory; }
         public float Height { get => m_windowRect.height;  }

@@ -108,7 +108,6 @@ namespace Gungnir
     internal class CommandHandler
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
-        private const string CommandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
         private CustomConsole m_console = null;
         private Gungnir m_plugin = null;
@@ -123,6 +122,47 @@ namespace Gungnir
         private static List<string> GetPrefabNames()
         {
             return ZNetScene.instance?.GetPrefabNames();
+        }
+
+        [Command("bind", "Bind a console command to a key. See the Unity documentation for KeyCode names.")]
+        public void Bind(string keyCode, params string[] commandText)
+        {
+            if (!Enum.TryParse(keyCode, true, out KeyCode result))
+            {
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            if (Plugin.Binds.ContainsKey(result))
+                Plugin.Binds.Remove(result);
+
+            string cmd = string.Join(" ", commandText);
+            Plugin.Binds.Add(result, cmd);
+
+            Plugin.SaveBinds();
+
+            Logger.Log($"Bound {result.ToString().WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
+        }
+
+        [Command("butcher", "Kills all living creatures within a radius, excluding players.")]
+        public void KillAll(float radius = 50f, bool killTamed = false)
+        {
+            List<Character> characters = new List<Character>();
+            Character.GetCharactersInRange(Player.m_localPlayer.transform.position, radius, characters);
+
+            int count = 0;
+            foreach (Character character in characters)
+            {
+                if (!character.IsPlayer() && !(character.IsTamed() && !killTamed))
+                {
+                    HitData hitData = new HitData();
+                    hitData.m_damage.m_damage = Mathf.Infinity;
+                    character.Damage(hitData);
+                    ++count;
+                }
+            }
+
+            Logger.Log($"Murdered {count.ToString().WithColor(Logger.GoodColor)} creatures within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("clear", "Clears the console's output.")]
@@ -142,6 +182,12 @@ namespace Gungnir
                 Player.m_debugMode = true;
 
             Logger.Log($"Creative mode: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
+        [Command("echo", "Shout into the void.")]
+        public void Echo(params string[] values)
+        {
+            global::Console.instance.Print(string.Join(" ", values));
         }
 
         [Command("fly", "Toggles the ability to fly.")]
@@ -234,6 +280,13 @@ namespace Gungnir
             player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
         }
 
+        [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
+        public void ToggleGhostMode()
+        {
+            Player.m_localPlayer.SetGhostMode(!Player.m_localPlayer.InGhostMode());
+            Logger.Log($"Ghost mode: {(Player.m_localPlayer.InGhostMode() ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
         [Command("god", "Toggles invincibility.")]
         public void ToggleGodmode()
         {
@@ -314,6 +367,57 @@ namespace Gungnir
                     global::Console.instance.Print($"{commandOrPageNum.WithColor(Logger.WarningColor)}\n{meta.data.description}");
 
             }
+        }
+
+        [Command("listbinds", "List all of your custom keybinds, or check what an individual keycode is bound to.")]
+        public void ListBinds(string keyCode = null)
+        {
+            if (Plugin.Binds.Count == 0)
+            {
+                Logger.Error($"You have no keybinds currently set. Use {"/bind".WithColor(Color.white)} to add some.", true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(keyCode))
+            {
+                foreach (KeyValuePair<KeyCode, string> pair in Plugin.Binds)
+                    global::Console.instance.Print($"{pair.Key} = {pair.Value.WithColor(Logger.WarningColor)}");
+
+                return;
+            }
+
+            if (!Enum.TryParse(keyCode, true, out KeyCode result))
+            {
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            if (!Plugin.Binds.TryGetValue(result, out string cmd))
+            {
+                Logger.Error($"{keyCode.ToString().WithColor(Color.white)} is not bound to anything.", true);
+                return;
+            }
+
+            global::Console.instance.Print($"{result} = {cmd.WithColor(Logger.WarningColor)}");
+        }
+
+        [Command("listweather", "Get a list of all available weather types.")]
+        public void ListWeather()
+        {
+            if (!EnvMan.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
+            var query =
+                from env in EnvMan.instance.m_environments
+                select env.m_name;
+
+            Logger.Log($"Found {query.Count().ToString().WithColor(Logger.GoodColor)} available weather types...", true);
+
+            foreach (string name in query)
+                global::Console.instance.Print(name);
         }
 
         [Command("listitems", "List every item in the game, or search for one that contains your text.")]
@@ -407,12 +511,13 @@ namespace Gungnir
         [Command("nostam", "Toggles infinite stamina.")]
         public void ToggleStamina()
         {
-            if (Player.m_localPlayer.m_runStaminaDrain > 0f)
+            if (!Plugin.NoStamina)
             {
                 Player.m_localPlayer.m_staminaRegenDelay = 0.05f;
                 Player.m_localPlayer.m_staminaRegen = 999f;
                 Player.m_localPlayer.m_runStaminaDrain = 0f;
                 Player.m_localPlayer.SetMaxStamina(9999f, true);
+                Plugin.NoStamina = true;
             }
             else
             {
@@ -420,10 +525,11 @@ namespace Gungnir
                 Player.m_localPlayer.m_staminaRegen = 5f;
                 Player.m_localPlayer.m_runStaminaDrain = 10f;
                 Player.m_localPlayer.SetMaxStamina(100f, true);
+                Plugin.NoStamina = false;
             }
 
             Logger.Log(
-                $"Infinite stamina: {(Player.m_localPlayer.m_runStaminaDrain <= 0f ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
+                $"Infinite stamina: {(Plugin.NoStamina ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
                 true
             );
         }
@@ -444,7 +550,7 @@ namespace Gungnir
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
-        public void RemoveDrops(int radius = 100)
+        public void RemoveDrops(float radius = 100f)
         {
             ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
 
@@ -563,6 +669,113 @@ namespace Gungnir
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
         }
 
+        [Command("time", "Overrides the time of day for you only (0 to 1 where 0.5 is noon). Set to a negative number to disable.")]
+        public void SetTime(float time)
+        {
+            if (!EnvMan.instance)
+            {
+                Logger.Error("No scene found. Try loading a world.", true);
+                return;
+            }
+
+            if (time >= 0f)
+            {
+                time = Mathf.Clamp01(time);
+                EnvMan.instance.m_debugTimeOfDay = true;
+                EnvMan.instance.m_debugTime = time;
+
+                float realTime = time * 24f;
+                int hour = (int)realTime;
+                int minutes = (int)((realTime - (int)realTime) * 60f);
+                string formatted = $"{hour.ToString().PadLeft(2, '0')}:{minutes.ToString().PadLeft(2, '0')}".WithColor(Logger.GoodColor);
+                Logger.Log($"Time set to {formatted}.", true);
+            }
+            else
+            {
+                EnvMan.instance.m_debugTimeOfDay = false;
+                Logger.Log("Time re-synchronized with the game.", true);
+            }
+        }
+
+        [Command("unbind", "Removes a custom keybind.")]
+        public void Unbind(string keyCode)
+        {
+            if (!Enum.TryParse(keyCode, true, out KeyCode result))
+            {
+                Logger.Error($"Couldn't find a key code named {keyCode.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            if (!Plugin.Binds.ContainsKey(result))
+            {
+                Logger.Error($"{result.ToString().WithColor(Color.white)} is not bound to anything.", true);
+                return;
+            }
+
+            Plugin.Binds.Remove(result);
+            Plugin.SaveBinds();
+
+            Logger.Log($"Unbound {result.ToString().WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("unbindall", "Unbinds ALL of your Gungnir-related keybinds. Requires a true/1/yes as parameter to confirm you mean it.")]
+        public void UnbindAll(bool confirm)
+        {
+            if (!confirm)
+            {
+                Logger.Error("Your binds will continue to live...", true);
+                return;
+            }
+
+            Plugin.Binds.Clear();
+            Plugin.SaveBinds();
+
+            Logger.Log("All of your binds have been cleared.", true);
+        }
+
+        [Command("weather", "Overrides the weather for you only. Use -1 to clear the override.")]
+        public void SetWeather(string weatherType)
+        {
+            if (string.IsNullOrEmpty(weatherType))
+            {
+                Logger.Error("You must specify a weather type.", true);
+                return;
+            }
+
+            if (int.TryParse(weatherType, out int result))
+            {
+                if (result < 0)
+                {
+                    EnvMan.instance.m_debugEnv = string.Empty;
+                    Logger.Log("Weather re-synchronized with the game.", true);
+                    return;
+                }
+
+                Logger.Log("If you want to clear the forced weather, send a negative number next time.", true);
+                return;
+            }
+
+            string targetWeather = null;
+
+            try
+            {
+                targetWeather = Util.GetPartialMatch(EnvMan.instance.m_environments.Select(e => e.m_name), weatherType);
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find the weather type {weatherType.WithColor(Color.white)}.", true);
+                return;
+            }
+            catch (TooManyValuesException)
+            {
+                Logger.Error($"Found more than one weather type containing the text {weatherType.WithColor(Color.white)}, please be more specific.", true);
+                return;
+            }
+
+            EnvMan.instance.m_debugEnv = targetWeather;
+            Logger.Log($"Set weather type to {targetWeather.WithColor(Logger.GoodColor)}.", true);
+        }
+
         // Please do not edit below this line unless you really need to.
         // Thanks.
 
@@ -648,10 +861,7 @@ namespace Gungnir
             text = text.Simplified();
 
             // Split the text using our pattern. Splits by spaces but preserves quote groups.
-            List<string> args = Regex.Matches(text, CommandPattern)
-                                            .OfType<Match>()
-                                            .Select(m => m.Groups[0].Value)
-                                            .ToList();
+            List<string> args = Util.SplitByQuotes(text);
 
             // Store command ID and remove it from our arguments list.
             string commandName = args[0];
@@ -682,23 +892,32 @@ namespace Gungnir
                 if (i < args.Count)
                 {
                     Type argType = command.arguments[i].ParameterType;
+                    
                     string arg = args[i];
 
                     object converted = null;
 
                     try
                     {
-                        converted = Util.StringToObject(arg, argType);
+                        if (command.arguments[i].GetCustomAttribute(typeof(ParamArrayAttribute)) != null)
+                        {
+                            argType = argType.GetElementType();
+                            converted = Util.StringsToObjects(args.Skip(i).ToArray(), argType);
+                        }
+                        else
+                        {
+                            converted = Util.StringToObject(arg, argType);
+                        }
                     }
                     catch (SystemException e)
                     {
                         Logger.Error($"System error while converting <color=white>{arg}</color> to <color=white>{argType.Name}</color>: {e.Message}");
                     }
-                    catch (TooManyValuesException e)
+                    catch (TooManyValuesException)
                     {
                         Logger.Error($"Found more than one {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
                     }
-                    catch (NoMatchFoundException e)
+                    catch (NoMatchFoundException)
                     {
                         Logger.Error($"Couldn't find a {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
                     }
@@ -710,7 +929,15 @@ namespace Gungnir
                         return;
                     }
 
-                    convertedArgs.Add(converted);
+                    if (converted.GetType().IsArray)
+                    {
+                        object[] arr = converted as object[];
+                        var things = Array.CreateInstance(argType, arr.Length);
+                        Array.Copy(arr, things, arr.Length);
+                        convertedArgs.Add(things);
+                    }
+                    else
+                        convertedArgs.Add(converted);
                 }
                 // Otherwise, if we're still iterating, there's parameters they left unfilled.
                 // This will only execute if they are optional parameters, due to our required arg count check earlier.

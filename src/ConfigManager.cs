@@ -37,5 +37,24 @@ namespace Gungnir
 
             return value.Value;
         }
+
+        /// <summary>
+        /// Set a specific config value by name.
+        /// </summary>
+        /// <typeparam name="T">Type of value stored at the given <paramref name="key"/></typeparam>
+        /// <param name="key">Config value to set.</param>
+        /// <param name="value">Value to set the key to.</param>
+        /// <returns></returns>
+        public static void Set<T>(string key, T value)
+        {
+            if (!s_config.TryGetValue(key, out ConfigEntryBase obj))
+            {
+                Logger.Error($"Attempt to access nonexistent config value '{key}'.");
+                return;
+            }
+
+            var converted = obj as ConfigEntry<T>;
+            converted.Value = value;
+        }
     }
 }

@@ -36,6 +36,15 @@ namespace Gungnir
     internal static class Util
     {
         private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
+        private const string s_commandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
+
+        public static List<string> SplitByQuotes(string text)
+        {
+            return Regex.Matches(text, s_commandPattern)
+                .OfType<Match>()
+                .Select(m => m.Groups[0].Value)
+                .ToList();
+        }
 
         /// <summary>
         /// Find a <see cref="Player"/> by their name. Case insensitive, and allows partial matches.
@@ -199,6 +208,18 @@ namespace Gungnir
             }
         }
 
+        public static object[] StringsToObjects(string[] values, Type toType, bool noThrow = false)
+        {
+            object[] result = new object[values.Length];
+
+            for (int i = 0; i < result.Length; ++i)
+            {
+                result[i] = StringToObject(values[i], toType, noThrow);
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Translates a <see cref="Type"/> to a nice user-friendly name.
         /// </summary>
@@ -206,6 +227,9 @@ namespace Gungnir
         /// <returns><see langword="string"/> containing the type name.</returns>
         public static string GetSimpleTypeName(Type type)
         {
+            if (type.IsArray)
+                return GetSimpleTypeName(type.GetElementType()) + "[]";
+
             switch (type.Name)
             {
                 case nameof(Int32):
@@ -258,6 +282,44 @@ namespace Gungnir
             value += ")";
 
             return value;
+        }
+
+        /// <summary>
+        /// Helper to find a partial match from an enumerable collection.
+        /// </summary>
+        /// <param name="input">Collection to search through.</param>
+        /// <param name="key">Needle to find in the collection.</param>
+        /// <param name="noThrow">Whether exceptions should be thrown for specificity.</param>
+        /// <returns>A <see langword="string"/> with the found item, or <see langword="null"/> if nothing.</returns>
+        /// <exception cref="NoMatchFoundException"></exception>
+        /// <exception cref="TooManyValuesException"></exception>
+        public static string GetPartialMatch(IEnumerable<string> input, string key, bool noThrow = false)
+        {
+            IEnumerable<string> query =
+                            from item in input
+                            where item.StartsWith(key, StringComparison.OrdinalIgnoreCase)
+                            orderby item.Length
+                            select item;
+
+            int count = query.Count();
+
+            if (count <= 0)
+            {
+                if (!noThrow)
+                    throw new NoMatchFoundException(key);
+            }
+            else
+            {
+                string first = query.First();
+
+                // Test if we have just one result, or the first result is an exact match.
+                if (count == 1 || first.Equals(key, StringComparison.OrdinalIgnoreCase))
+                    return first;
+                else if (!noThrow)
+                    throw new TooManyValuesException(1, count);
+            }
+
+            return null;
         }
 
         /// <summary>
