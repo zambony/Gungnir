@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using UnityEngine;
@@ -38,12 +39,56 @@ namespace Gungnir
         private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
         private const string s_commandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
 
+        /// <summary>
+        /// Split a string up into individual words. Phrases surrounded by quotes will count as a single item.
+        /// </summary>
+        /// <param name="text">Text to separate</param>
+        /// <returns>A <see cref="List{string}"/> containing the separated pieces.</returns>
         public static List<string> SplitByQuotes(string text)
         {
             return Regex.Matches(text, s_commandPattern)
                 .OfType<Match>()
                 .Select(m => m.Groups[0].Value)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Split a string by a separator character, except if the separator is enclosed in quotes.
+        /// </summary>
+        /// <param name="text">Text to split.</param>
+        /// <param name="separator">Character to separate sections with.</param>
+        /// <param name="keepEmpty">True to keep empty sections, false otherwise.</param>
+        /// <returns>A <see cref="List{string}"/> of all the separated sections, not including the separator character.</returns>
+        public static List<string> SplitEscaped(this string text, char separator = ',', bool keepEmpty = false)
+        {
+            List<string> result = new List<string>();
+            bool escaped = false;
+            int start = 0;
+            int end = 0;
+
+            for (int i = 0; i < text.Length; ++i)
+            {
+                if (text[i] == '"')
+                {
+                    escaped = !escaped;
+                }
+                else if (text[i] == separator && !escaped)
+                {
+                    end = i - 1;
+                    result.Add(text.Substring(start, end - start + 1));
+                    start = i + 1;
+                }
+
+                if (i == text.Length - 1)
+                {
+                    result.Add(text.Substring(start, text.Length - start));
+                }
+            }
+
+            if (!keepEmpty)
+                result.RemoveAll(string.IsNullOrEmpty);
+
+            return result;
         }
 
         /// <summary>
