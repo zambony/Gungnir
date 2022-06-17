@@ -112,8 +112,8 @@ namespace Gungnir
         private CustomConsole m_console = null;
         private Gungnir m_plugin = null;
 
-        public CustomConsole Console { get => m_console; set => m_console = value; }
-        public Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
+        internal CustomConsole Console { get => m_console; set => m_console = value; }
+        internal Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
@@ -508,6 +508,18 @@ namespace Gungnir
             }
         }
 
+        [Command("listskills", "List every available skill in the game.")]
+        public void ListSkills()
+        {
+            var enumList = Enum.GetValues(typeof(Skills.SkillType));
+            int count = enumList.Length;
+
+            Logger.Log($"Found {count.ToString().WithColor(Logger.GoodColor)} available skills...", true);
+
+            foreach (Skills.SkillType skillType in enumList)
+                global::Console.instance.Print(skillType.ToString());
+        }
+
         [Command("nostam", "Toggles infinite stamina.")]
         public void ToggleStamina()
         {
@@ -581,6 +593,37 @@ namespace Gungnir
             }
 
             Logger.Log("All your items have been repaired.", true);
+        }
+
+        [Command("setskill", "Set the level of one of your skills.")]
+        public void SetSkill(string skillName, int level)
+        {
+            string targetSkill;
+
+            try
+            {
+                targetSkill = Util.GetPartialMatch(
+                    ((IEnumerable<Skills.SkillType>)Enum.GetValues(typeof(Skills.SkillType))).Select(skill => skill.ToString()),
+                    skillName
+                );
+            }
+            catch (TooManyValuesException)
+            {
+                Logger.Error($"Found more than one skill containing the text {skillName.WithColor(Color.white)}, please be more specific.", true);
+                return;
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find a skill named {skillName.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            level = Mathf.Clamp(level, 0, 100);
+
+            Player.m_localPlayer.GetSkills().CheatResetSkill(targetSkill);
+            Player.m_localPlayer.GetSkills().CheatRaiseSkill(targetSkill, level);
+
+            Logger.Log($"Set {targetSkill.WithColor(Logger.GoodColor)} to level {level.ToString().WithColor(Logger.GoodColor)}.", true);
         }
 
         [Command("spawn", "Spawn a prefab/creature/item. If it's a creature, levelOrQuantity will set the level, or if it's an item, set the stack size.", nameof(GetPrefabNames))]

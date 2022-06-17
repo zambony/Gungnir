@@ -28,7 +28,8 @@ namespace Gungnir
         public bool NoStructuralSupport = false;
         public bool NoStamina           = false;
 
-        public Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
+        internal Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
+        internal CommandHandler Handler { get => m_handler; set => m_handler = value; }
 
         /// <summary>
         /// Save all of the user's console keybinds to a file in the BepInEx config folder.
