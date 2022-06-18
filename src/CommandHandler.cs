@@ -144,7 +144,7 @@ namespace Gungnir
             Logger.Log($"Bound {result.ToString().WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
         }
 
-        [Command("butcher", "Kills all living creatures within a radius, excluding players.")]
+        [Command("butcher", "Kills all living creatures within a radius (meters), excluding players.")]
         public void KillAll(float radius = 50f, bool killTamed = false)
         {
             List<Character> characters = new List<Character>();
@@ -191,16 +191,22 @@ namespace Gungnir
         }
 
         [Command("fly", "Toggles the ability to fly.")]
-        public void ToggleFly()
+        public void ToggleFly(bool noCollision = false)
         {
             bool enabled = Player.m_localPlayer.ToggleDebugFly();
+
+            if (enabled)
+                Player.m_localPlayer.GetComponent<Collider>().enabled = !noCollision;
+            else
+                Player.m_localPlayer.GetComponent<Collider>().enabled = true;
 
             if (!enabled && !Player.m_localPlayer.NoCostCheat())
                 Player.m_debugMode = false;
             else
                 Player.m_debugMode = true;
 
-            Logger.Log($"Flight: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+            Logger.Log(
+                $"Flight: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))} | No collision: {(noCollision && enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]
@@ -565,12 +571,12 @@ namespace Gungnir
         public void Pos()
         {
             Vector3 pos = Player.m_localPlayer.transform.position;
-            string fmt = $"{pos.x} {pos.y} {pos.z}".WithColor(Logger.GoodColor);
+            string fmt = $"{Math.Round(pos.x, 3)} {Math.Round(pos.y, 3)} {Math.Round(pos.z, 3)}".WithColor(Logger.GoodColor);
             Logger.Log($"Your current position is {fmt}", true);
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
-        public void RemoveDrops(float radius = 100f)
+        public void RemoveDrops(float radius = 50f)
         {
             ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
 
@@ -581,6 +587,7 @@ namespace Gungnir
 
                 if (component && Vector3.Distance(item.gameObject.transform.position, Player.m_localPlayer.gameObject.transform.position) <= radius)
                 {
+                    component.ClaimOwnership();
                     component.Destroy();
                     ++count;
                 }
@@ -603,8 +610,8 @@ namespace Gungnir
             Logger.Log("All your items have been repaired.", true);
         }
 
-        [Command("repairbuilds", "Repairs all nearby structures within a radius.")]
-        public void RepairBuildings(float radius = 100f)
+        [Command("repairbuilds", "Repairs all nearby structures within a radius (meters).")]
+        public void RepairBuildings(float radius = 50f)
         {
             if (Player.m_localPlayer == null)
             {
@@ -652,6 +659,18 @@ namespace Gungnir
             Player.m_localPlayer.GetSkills().CheatRaiseSkill(targetSkill, level);
 
             Logger.Log($"Set {targetSkill.WithColor(Logger.GoodColor)} to level {level.ToString().WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("seed", "Print the seed used by this world.")]
+        public void Seed()
+        {
+            if (ZNetScene.instance == null)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            Logger.Log(WorldGenerator.instance.GetPrivateField<World>("m_world").m_seedName.WithColor(Logger.GoodColor), true);
         }
 
         [Command("spawn", "Spawn a prefab/creature/item. If it's a creature, levelOrQuantity will set the level, or if it's an item, set the stack size.", nameof(GetPrefabNames))]

@@ -15,7 +15,7 @@ namespace Gungnir
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
         // GUI Style values.
-        private const int s_maxHistory         = 200;
+        private const int s_maxHistory         = 1000;
         private const int s_fontSize           = 16;
         private const int s_historyEntryMargin = 10;
         private GUIStyle  m_consoleStyle       = new GUIStyle();
