@@ -162,7 +162,7 @@ namespace Gungnir
                 }
             }
 
-            Logger.Log($"Murdered {count.ToString().WithColor(Logger.GoodColor)} creatures within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+            Logger.Log($"Murdered {count.ToString().WithColor(Logger.GoodColor)} creature(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("clear", "Clears the console's output.")]
@@ -208,7 +208,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -406,7 +406,7 @@ namespace Gungnir
         {
             if (!EnvMan.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -425,7 +425,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -471,7 +471,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -561,6 +561,14 @@ namespace Gungnir
 
         }
 
+        [Command("pos", "Print your current position as XYZ coordinates.")]
+        public void Pos()
+        {
+            Vector3 pos = Player.m_localPlayer.transform.position;
+            string fmt = $"{pos.x} {pos.y} {pos.z}".WithColor(Logger.GoodColor);
+            Logger.Log($"Your current position is {fmt}", true);
+        }
+
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
         public void RemoveDrops(float radius = 100f)
         {
@@ -578,7 +586,7 @@ namespace Gungnir
                 }
             }
 
-            Logger.Log($"Removed {count.ToString().WithColor(Logger.GoodColor)} items within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+            Logger.Log($"Removed {count.ToString().WithColor(Logger.GoodColor)} item(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("repair", "Repairs every item in your inventory.")]
@@ -593,6 +601,26 @@ namespace Gungnir
             }
 
             Logger.Log("All your items have been repaired.", true);
+        }
+
+        [Command("repairbuilds", "Repairs all nearby structures within a radius.")]
+        public void RepairBuildings(float radius = 100f)
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            int count = 0;
+
+            foreach (WearNTear obj in WearNTear.GetAllInstaces())
+            {
+                if (obj.Repair() && Vector3.Distance(obj.gameObject.transform.position, Player.m_localPlayer.transform.position) <= radius)
+                    ++count;
+            }
+
+            Logger.Log($"Repaired {count.ToString().WithColor(Logger.GoodColor)} structure(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("setskill", "Set the level of one of your skills.")]
@@ -631,7 +659,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -717,7 +745,7 @@ namespace Gungnir
         {
             if (!EnvMan.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
