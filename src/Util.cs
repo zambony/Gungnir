@@ -165,31 +165,7 @@ namespace Gungnir
         /// <exception cref="TooManyValuesException"></exception>
         public static GameObject GetPrefabByName(string name, bool noThrow = false)
         {
-            IEnumerable<string> query =
-                from prefabName in ZNetScene.instance.GetPrefabNames()
-                where prefabName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
-                orderby prefabName.Length
-                select prefabName;
-
-            int count = query.Count();
-
-            if (count <= 0)
-            {
-                if (!noThrow)
-                    throw new NoMatchFoundException(name);
-            }
-            else
-            {
-                string first = query.First();
-
-                // Test if we have just one result, or the first result is an exact match.
-                if (count == 1 || first.Equals(name, StringComparison.OrdinalIgnoreCase))
-                    return ZNetScene.instance.GetPrefab(first);
-                else if (!noThrow)
-                    throw new TooManyValuesException(1, count);
-            }
-
-            return null;
+            return ZNetScene.instance.GetPrefab(GetPartialMatch(ZNetScene.instance.GetPrefabNames(), name, noThrow));
         }
 
         /// <summary>
