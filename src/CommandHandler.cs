@@ -239,7 +239,6 @@ namespace Gungnir
             if (player == null)
                 player = Player.m_localPlayer;
 
-
             GameObject prefabObject;
 
             try
@@ -283,7 +282,23 @@ namespace Gungnir
             Logger.Log(
                 $"Gave {amount.ToString().WithColor(Logger.GoodColor)} of {prefabObject.name.WithColor(Logger.GoodColor)} to {player.GetPlayerName().WithColor(Logger.GoodColor)}.", true);
 
-            player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
+            /// TODO: Seems like some custom RPC handlers are needed to actually insert something into
+            /// someone else's inventory. https://github.com/zambony/Gungnir/issues/14
+            /// Just let it drop on the ground near them if it's not the local player for now.
+            if (player == Player.m_localPlayer)
+                player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
+        }
+
+        [Command("goto", "Teleport yourself to another player.")]
+        public void Goto(Player player)
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            Player.m_localPlayer.transform.position = player.transform.position - (player.transform.forward * 1.5f) + (Vector3.up * 2f);
         }
 
         [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
@@ -567,11 +582,11 @@ namespace Gungnir
 
         }
 
-        [Command("pos", "Print your current position as XYZ coordinates.")]
+        [Command("pos", "Print your current position as XZY coordinates. (XZY is used for tp command.)")]
         public void Pos()
         {
             Vector3 pos = Player.m_localPlayer.transform.position;
-            string fmt = $"{Math.Round(pos.x, 3)} {Math.Round(pos.y, 3)} {Math.Round(pos.z, 3)}".WithColor(Logger.GoodColor);
+            string fmt = $"{Math.Round(pos.x, 3)} {Math.Round(pos.z, 3)} {Math.Round(pos.y, 3)}".WithColor(Logger.GoodColor);
             Logger.Log($"Your current position is {fmt}", true);
         }
 
@@ -785,6 +800,25 @@ namespace Gungnir
                 EnvMan.instance.m_debugTimeOfDay = false;
                 Logger.Log("Time re-synchronized with the game.", true);
             }
+        }
+
+        [Command("tp", "Teleport to specific coordinates. The Y value is optional. If omitted, will attempt to find the best height to put you at automagically.")]
+        public void Teleport(float x, float z, float? y = null)
+        {
+            if (!Player.m_localPlayer)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            if (y == null)
+            {
+                Physics.Raycast(new Vector3(x, 5000, z), Vector3.down, out RaycastHit hit, 10000);
+                y = hit.point.y;
+            }
+
+            Player.m_localPlayer.transform.position = new Vector3(x, (float)y, z);
+            Logger.Log("Woosh!", true);
         }
 
         [Command("unbind", "Removes a custom keybind.")]

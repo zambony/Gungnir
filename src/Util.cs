@@ -196,6 +196,9 @@ namespace Gungnir
         {
             try
             {
+                if (Nullable.GetUnderlyingType(toType) != null)
+                    toType = Nullable.GetUnderlyingType(toType);
+
                 if (toType == typeof(Player))
                 {
                     if (long.TryParse(value, out long id))
@@ -249,6 +252,9 @@ namespace Gungnir
         /// <returns><see langword="string"/> containing the type name.</returns>
         public static string GetSimpleTypeName(Type type)
         {
+            if (Nullable.GetUnderlyingType(type) != null)
+                type = Nullable.GetUnderlyingType(type);
+
             if (type.IsArray)
                 return GetSimpleTypeName(type.GetElementType()) + "[]";
 
