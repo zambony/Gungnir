@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using HarmonyLib;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace Gungnir.Patch
 {
@@ -128,6 +129,26 @@ namespace Gungnir.Patch
                 if (Plugin.NoStamina && ___m_nview.IsValid() && ___m_nview.IsOwner())
                 {
                     __result = true;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Terminal), "TryRunCommand")]
+        public static class CommandChainingPatch
+        {
+            private static bool Prefix(string text)
+            {
+                List<string> commands = text.SplitEscaped(';');
+
+                // Avoid recursion. Don't want to call this prefix infinitely...
+                if (commands.Count > 1)
+                {
+                    foreach (string command in commands)
+                        Console.instance.TryRunCommand(command);
+
                     return false;
                 }
 

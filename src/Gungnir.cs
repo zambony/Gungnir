@@ -16,7 +16,7 @@ namespace Gungnir
         public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
-        public const string ModVersion = "1.1.0";
+        public const string ModVersion = "1.2.0";
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
@@ -28,7 +28,8 @@ namespace Gungnir
         public bool NoStructuralSupport = false;
         public bool NoStamina           = false;
 
-        public Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
+        internal Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
+        internal CommandHandler Handler { get => m_handler; set => m_handler = value; }
 
         /// <summary>
         /// Save all of the user's console keybinds to a file in the BepInEx config folder.
@@ -62,7 +63,7 @@ namespace Gungnir
             foreach (string line in lines)
             { 
                 // Only split by the first instance of equals.
-                string[] info = line.Trim().Split(new char[] {'='}, 1);
+                string[] info = line.Trim().Split(new char[] {'='}, 2);
 
                 if (info.Length != 2)
                     continue;

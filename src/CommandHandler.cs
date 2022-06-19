@@ -112,8 +112,8 @@ namespace Gungnir
         private CustomConsole m_console = null;
         private Gungnir m_plugin = null;
 
-        public CustomConsole Console { get => m_console; set => m_console = value; }
-        public Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
+        internal CustomConsole Console { get => m_console; set => m_console = value; }
+        internal Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
@@ -144,7 +144,7 @@ namespace Gungnir
             Logger.Log($"Bound {result.ToString().WithColor(Logger.GoodColor)} to {cmd.WithColor(Logger.WarningColor)}.", true);
         }
 
-        [Command("butcher", "Kills all living creatures within a radius, excluding players.")]
+        [Command("butcher", "Kills all living creatures within a radius (meters), excluding players.")]
         public void KillAll(float radius = 50f, bool killTamed = false)
         {
             List<Character> characters = new List<Character>();
@@ -162,7 +162,7 @@ namespace Gungnir
                 }
             }
 
-            Logger.Log($"Murdered {count.ToString().WithColor(Logger.GoodColor)} creatures within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+            Logger.Log($"Murdered {count.ToString().WithColor(Logger.GoodColor)} creature(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("clear", "Clears the console's output.")]
@@ -191,16 +191,22 @@ namespace Gungnir
         }
 
         [Command("fly", "Toggles the ability to fly.")]
-        public void ToggleFly()
+        public void ToggleFly(bool noCollision = false)
         {
             bool enabled = Player.m_localPlayer.ToggleDebugFly();
+
+            if (enabled)
+                Player.m_localPlayer.GetComponent<Collider>().enabled = !noCollision;
+            else
+                Player.m_localPlayer.GetComponent<Collider>().enabled = true;
 
             if (!enabled && !Player.m_localPlayer.NoCostCheat())
                 Player.m_debugMode = false;
             else
                 Player.m_debugMode = true;
 
-            Logger.Log($"Flight: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+            Logger.Log(
+                $"Flight: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))} | No collision: {(noCollision && enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("give", "Give an item to yourself or another player.", nameof(GetPrefabNames))]
@@ -208,7 +214,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -232,7 +238,6 @@ namespace Gungnir
 
             if (player == null)
                 player = Player.m_localPlayer;
-
 
             GameObject prefabObject;
 
@@ -277,7 +282,23 @@ namespace Gungnir
             Logger.Log(
                 $"Gave {amount.ToString().WithColor(Logger.GoodColor)} of {prefabObject.name.WithColor(Logger.GoodColor)} to {player.GetPlayerName().WithColor(Logger.GoodColor)}.", true);
 
-            player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
+            /// TODO: Seems like some custom RPC handlers are needed to actually insert something into
+            /// someone else's inventory. https://github.com/zambony/Gungnir/issues/14
+            /// Just let it drop on the ground near them if it's not the local player for now.
+            if (player == Player.m_localPlayer)
+                player.Pickup(spawned, autoequip: false, autoPickupDelay: false);
+        }
+
+        [Command("goto", "Teleport yourself to another player.")]
+        public void Goto(Player player)
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            Player.m_localPlayer.transform.position = player.transform.position - (player.transform.forward * 1.5f) + (Vector3.up * 2f);
         }
 
         [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
@@ -406,7 +427,7 @@ namespace Gungnir
         {
             if (!EnvMan.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -425,7 +446,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -471,7 +492,7 @@ namespace Gungnir
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -506,6 +527,18 @@ namespace Gungnir
                 foreach (string item in foundPrefabs)
                     global::Console.instance.Print(item);
             }
+        }
+
+        [Command("listskills", "List every available skill in the game.")]
+        public void ListSkills()
+        {
+            var enumList = Enum.GetValues(typeof(Skills.SkillType));
+            int count = enumList.Length;
+
+            Logger.Log($"Found {count.ToString().WithColor(Logger.GoodColor)} available skills...", true);
+
+            foreach (Skills.SkillType skillType in enumList)
+                global::Console.instance.Print(skillType.ToString());
         }
 
         [Command("nostam", "Toggles infinite stamina.")]
@@ -549,8 +582,16 @@ namespace Gungnir
 
         }
 
+        [Command("pos", "Print your current position as XZY coordinates. (XZY is used for tp command.)")]
+        public void Pos()
+        {
+            Vector3 pos = Player.m_localPlayer.transform.position;
+            string fmt = $"{Math.Round(pos.x, 3)} {Math.Round(pos.z, 3)} {Math.Round(pos.y, 3)}".WithColor(Logger.GoodColor);
+            Logger.Log($"Your current position is {fmt}", true);
+        }
+
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
-        public void RemoveDrops(float radius = 100f)
+        public void RemoveDrops(float radius = 50f)
         {
             ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
 
@@ -561,12 +602,13 @@ namespace Gungnir
 
                 if (component && Vector3.Distance(item.gameObject.transform.position, Player.m_localPlayer.gameObject.transform.position) <= radius)
                 {
+                    component.ClaimOwnership();
                     component.Destroy();
                     ++count;
                 }
             }
 
-            Logger.Log($"Removed {count.ToString().WithColor(Logger.GoodColor)} items within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+            Logger.Log($"Removed {count.ToString().WithColor(Logger.GoodColor)} item(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("repair", "Repairs every item in your inventory.")]
@@ -583,12 +625,75 @@ namespace Gungnir
             Logger.Log("All your items have been repaired.", true);
         }
 
+        [Command("repairbuilds", "Repairs all nearby structures within a radius (meters).")]
+        public void RepairBuildings(float radius = 50f)
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            int count = 0;
+
+            foreach (WearNTear obj in WearNTear.GetAllInstaces())
+            {
+                if (obj.Repair() && Vector3.Distance(obj.gameObject.transform.position, Player.m_localPlayer.transform.position) <= radius)
+                    ++count;
+            }
+
+            Logger.Log($"Repaired {count.ToString().WithColor(Logger.GoodColor)} structure(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+        }
+
+        [Command("setskill", "Set the level of one of your skills.")]
+        public void SetSkill(string skillName, int level)
+        {
+            string targetSkill;
+
+            try
+            {
+                targetSkill = Util.GetPartialMatch(
+                    ((IEnumerable<Skills.SkillType>)Enum.GetValues(typeof(Skills.SkillType))).Select(skill => skill.ToString()),
+                    skillName
+                );
+            }
+            catch (TooManyValuesException)
+            {
+                Logger.Error($"Found more than one skill containing the text {skillName.WithColor(Color.white)}, please be more specific.", true);
+                return;
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find a skill named {skillName.WithColor(Color.white)}.", true);
+                return;
+            }
+
+            level = Mathf.Clamp(level, 0, 100);
+
+            Player.m_localPlayer.GetSkills().CheatResetSkill(targetSkill);
+            Player.m_localPlayer.GetSkills().CheatRaiseSkill(targetSkill, level);
+
+            Logger.Log($"Set {targetSkill.WithColor(Logger.GoodColor)} to level {level.ToString().WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("seed", "Print the seed used by this world.")]
+        public void Seed()
+        {
+            if (ZNetScene.instance == null)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            Logger.Log(WorldGenerator.instance.GetPrivateField<World>("m_world").m_seedName.WithColor(Logger.GoodColor), true);
+        }
+
         [Command("spawn", "Spawn a prefab/creature/item. If it's a creature, levelOrQuantity will set the level, or if it's an item, set the stack size.", nameof(GetPrefabNames))]
         public void SpawnPrefab(string prefab, int levelOrQuantity = 1)
         {
             if (!ZNetScene.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -674,7 +779,7 @@ namespace Gungnir
         {
             if (!EnvMan.instance)
             {
-                Logger.Error("No scene found. Try loading a world.", true);
+                Logger.Error("No world loaded.", true);
                 return;
             }
 
@@ -695,6 +800,25 @@ namespace Gungnir
                 EnvMan.instance.m_debugTimeOfDay = false;
                 Logger.Log("Time re-synchronized with the game.", true);
             }
+        }
+
+        [Command("tp", "Teleport to specific coordinates. The Y value is optional. If omitted, will attempt to find the best height to put you at automagically.")]
+        public void Teleport(float x, float z, float? y = null)
+        {
+            if (!Player.m_localPlayer)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            if (y == null)
+            {
+                Physics.Raycast(new Vector3(x, 5000, z), Vector3.down, out RaycastHit hit, 10000);
+                y = hit.point.y;
+            }
+
+            Player.m_localPlayer.transform.position = new Vector3(x, (float)y, z);
+            Logger.Log("Woosh!", true);
         }
 
         [Command("unbind", "Removes a custom keybind.")]
@@ -870,13 +994,13 @@ namespace Gungnir
             // Look up the command value, fail if it doesn't exist.
             if (!m_actions.TryGetValue(commandName, out CommandMeta command))
             {
-                Logger.Error($"Unknown command <color=white>{commandName}</color>", true);
+                Logger.Error($"Unknown command <color=white>{commandName}</color>.", true);
                 return;
             }
 
             if (args.Count < command.requiredArguments)
             {
-                Logger.Error($"Missing required number of arguments for <color=white>{commandName}</color>", true);
+                Logger.Error($"Missing required number of arguments for <color=white>{commandName}</color>.", true);
                 return;
             }
 

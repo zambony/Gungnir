@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace Gungnir
@@ -38,12 +40,56 @@ namespace Gungnir
         private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
         private const string s_commandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
 
+        /// <summary>
+        /// Split a string up into individual words. Phrases surrounded by quotes will count as a single item.
+        /// </summary>
+        /// <param name="text">Text to separate</param>
+        /// <returns>A <see cref="List{string}"/> containing the separated pieces.</returns>
         public static List<string> SplitByQuotes(string text)
         {
             return Regex.Matches(text, s_commandPattern)
                 .OfType<Match>()
                 .Select(m => m.Groups[0].Value)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Split a string by a separator character, except if the separator is enclosed in quotes.
+        /// </summary>
+        /// <param name="text">Text to split.</param>
+        /// <param name="separator">Character to separate sections with.</param>
+        /// <param name="keepEmpty">True to keep empty sections, false otherwise.</param>
+        /// <returns>A <see cref="List{string}"/> of all the separated sections, not including the separator character.</returns>
+        public static List<string> SplitEscaped(this string text, char separator = ',', bool keepEmpty = false)
+        {
+            List<string> result = new List<string>();
+            bool escaped = false;
+            int start = 0;
+            int end = 0;
+
+            for (int i = 0; i < text.Length; ++i)
+            {
+                if (text[i] == '"')
+                {
+                    escaped = !escaped;
+                }
+                else if (text[i] == separator && !escaped)
+                {
+                    end = i - 1;
+                    result.Add(text.Substring(start, end - start + 1));
+                    start = i + 1;
+                }
+
+                if (i == text.Length - 1)
+                {
+                    result.Add(text.Substring(start, text.Length - start));
+                }
+            }
+
+            if (!keepEmpty)
+                result.RemoveAll(string.IsNullOrEmpty);
+
+            return result;
         }
 
         /// <summary>
@@ -120,31 +166,7 @@ namespace Gungnir
         /// <exception cref="TooManyValuesException"></exception>
         public static GameObject GetPrefabByName(string name, bool noThrow = false)
         {
-            IEnumerable<string> query =
-                from prefabName in ZNetScene.instance.GetPrefabNames()
-                where prefabName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
-                orderby prefabName.Length
-                select prefabName;
-
-            int count = query.Count();
-
-            if (count <= 0)
-            {
-                if (!noThrow)
-                    throw new NoMatchFoundException(name);
-            }
-            else
-            {
-                string first = query.First();
-
-                // Test if we have just one result, or the first result is an exact match.
-                if (count == 1 || first.Equals(name, StringComparison.OrdinalIgnoreCase))
-                    return ZNetScene.instance.GetPrefab(first);
-                else if (!noThrow)
-                    throw new TooManyValuesException(1, count);
-            }
-
-            return null;
+            return ZNetScene.instance.GetPrefab(GetPartialMatch(ZNetScene.instance.GetPrefabNames(), name, noThrow));
         }
 
         /// <summary>
@@ -174,6 +196,9 @@ namespace Gungnir
         {
             try
             {
+                if (Nullable.GetUnderlyingType(toType) != null)
+                    toType = Nullable.GetUnderlyingType(toType);
+
                 if (toType == typeof(Player))
                 {
                     if (long.TryParse(value, out long id))
@@ -227,6 +252,9 @@ namespace Gungnir
         /// <returns><see langword="string"/> containing the type name.</returns>
         public static string GetSimpleTypeName(Type type)
         {
+            if (Nullable.GetUnderlyingType(type) != null)
+                type = Nullable.GetUnderlyingType(type);
+
             if (type.IsArray)
                 return GetSimpleTypeName(type.GetElementType()) + "[]";
 
@@ -331,6 +359,11 @@ namespace Gungnir
         public static string WithColor(this string text, Color color)
         {
             return $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{text}</color>";
+        }
+
+        public static T GetPrivateField<T>(this object self, string field)
+        {
+            return (T)self.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(self);
         }
     }
 }
