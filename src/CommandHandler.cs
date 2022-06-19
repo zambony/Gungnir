@@ -190,7 +190,7 @@ namespace Gungnir
             global::Console.instance.Print(string.Join(" ", values));
         }
 
-        [Command("fly", "Toggles the ability to fly.")]
+        [Command("fly", "Toggles the ability to fly. Can also disable collisions with the second argument.")]
         public void ToggleFly(bool noCollision = false)
         {
             bool enabled = Player.m_localPlayer.ToggleDebugFly();
