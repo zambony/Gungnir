@@ -16,7 +16,7 @@ namespace Gungnir
         public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
-        public const string ModVersion = "1.2.0";
+        public const string ModVersion = "1.2.1";
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
@@ -106,7 +106,7 @@ namespace Gungnir
 
         void Update()
         {
-            if (Console.IsVisible())
+            if (Console.IsVisible() || Chat.instance.HasFocus())
                 return;
 
             foreach (KeyValuePair<KeyCode, string> pair in m_binds)
