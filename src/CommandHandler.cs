@@ -994,13 +994,13 @@ namespace Gungnir
             // Look up the command value, fail if it doesn't exist.
             if (!m_actions.TryGetValue(commandName, out CommandMeta command))
             {
-                Logger.Error($"Unknown command <color=white>{commandName}</color>", true);
+                Logger.Error($"Unknown command <color=white>{commandName}</color>.", true);
                 return;
             }
 
             if (args.Count < command.requiredArguments)
             {
-                Logger.Error($"Missing required number of arguments for <color=white>{commandName}</color>", true);
+                Logger.Error($"Missing required number of arguments for <color=white>{commandName}</color>.", true);
                 return;
             }
 
