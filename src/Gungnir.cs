@@ -106,7 +106,7 @@ namespace Gungnir
 
         void Update()
         {
-            if (Console.IsVisible() || Chat.instance.HasFocus())
+            if (Console.IsVisible() || (Chat.instance != null && Chat.instance.HasFocus()))
                 return;
 
             foreach (KeyValuePair<KeyCode, string> pair in m_binds)
