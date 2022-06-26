@@ -845,7 +845,7 @@ namespace Gungnir
                 return;
             }
 
-            Ground.Lower(Player.m_localPlayer.transform.position, radius, depth);
+            Ground.Lower(Player.m_localPlayer.transform.position, radius, depth, strength);
             Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) lowered.", true);
         }
 
@@ -889,7 +889,7 @@ namespace Gungnir
                 return;
             }
 
-            Ground.Raise(Player.m_localPlayer.transform.position, radius, height);
+            Ground.Raise(Player.m_localPlayer.transform.position, radius, height, strength);
             Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) raised.", true);
         }
 
