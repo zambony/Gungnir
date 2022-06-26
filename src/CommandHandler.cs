@@ -590,6 +590,12 @@ namespace Gungnir
             Logger.Log($"Your current position is {fmt}", true);
         }
 
+        [Command("puke", "Clears all food buffs and makes room for you to eat something else.")]
+        public void Puke()
+        {
+            Player.m_localPlayer.ClearFood();
+        }
+
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
         public void RemoveDrops(float radius = 50f)
         {
@@ -801,6 +807,125 @@ namespace Gungnir
                 Logger.Log("Time re-synchronized with the game.", true);
             }
         }
+
+        // Start terrain commands. These are not arranged alphabetically with the rest of the commands
+        // because they are all very relevant, and it seemed appropriate to leave them grouped tightly.
+
+        [Command("tlevel", "Level the terrain in a radius.")]
+        public void TerrainLevel(float radius = 10f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            Ground.Level(Player.m_localPlayer.transform.position, radius);
+            Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) leveled.", true);
+        }
+
+        [Command("tlower", "Lower the terrain in a radius by some amount. Strength values closer to 0 make the terrain edges steep, while values further from 0 make them smoother.")]
+        public void TerrainLower(float radius = 10f, float depth = 1f, float strength = 0.01f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            if (depth <= 0f)
+            {
+                Logger.Error("Depth must be greater than 0.", true);
+                return;
+            }
+
+            if (strength <= 0f)
+            {
+                Logger.Error("Strength must be greater than 0.", true);
+                return;
+            }
+
+            Ground.Lower(Player.m_localPlayer.transform.position, radius, depth);
+            Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) lowered.", true);
+        }
+
+        [Command("tpaint", "Paint terrain in a radius. Available paint types are: dirt, paved, cultivate, and reset.")]
+        public void TerrainPaint(float radius = 5f, string paintType = "reset")
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            if (!Enum.TryParse(paintType, true, out TerrainModifier.PaintType type))
+            {
+                Logger.Error($"No paint type named {paintType.WithColor(Color.white)}", true);
+                return;
+            }
+
+            Ground.Paint(Player.m_localPlayer.transform.position, radius, type);
+            Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) painted.", true);
+        }
+
+        [Command("traise", "Raise the terrain in a radius by some amount. Strength values closer to 0 make the terrain edges steep, while values further from 0 make them smoother.")]
+        public void TerrainRaise(float radius = 10f, float height = 1f, float strength = 0.01f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            if (height <= 0f)
+            {
+                Logger.Error("Height must be greater than 0.", true);
+                return;
+            }
+
+            if (strength <= 0f)
+            {
+                Logger.Error("Strength must be greater than 0.", true);
+                return;
+            }
+
+            Ground.Raise(Player.m_localPlayer.transform.position, radius, height);
+            Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) raised.", true);
+        }
+
+        [Command("treset", "Reset all terrain modifications in a radius.")]
+        public void TerrainReset(float radius = 10f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            Ground.Reset(Player.m_localPlayer.transform.position, radius);
+            Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) reset.", true);
+        }
+
+        [Command("tsmooth", "Smooth terrain in a radius with some strength. Higher strengths mean more aggressive smoothing.")]
+        public void TerrainSmooth(float radius = 10f, float strength = 0.5f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            if (strength <= 0f)
+            {
+                Logger.Error("Strength must be greater than 0.", true);
+                return;
+            }
+
+            Ground.Smooth(Player.m_localPlayer.transform.position, radius, strength);
+            Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) smoothed.", true);
+        }
+
+        // End terrain commands.
 
         [Command("tp", "Teleport to specific coordinates. The Y value is optional. If omitted, will attempt to find the best height to put you at automagically.")]
         public void Teleport(float x, float z, float? y = null)
@@ -1076,6 +1201,222 @@ namespace Gungnir
             Logger.Log("Running command " + command.data.keyword);
             // Invoke the method, which will expand all the arguments automagically.
             command.method.Invoke(this, convertedArgs.ToArray());
+        }
+    }
+
+    internal static class Ground
+    {
+        internal enum Operation
+        {
+            None,
+            Level,
+            Raise,
+            Lower,
+            Smooth,
+            Paint
+        }
+
+        public static void Level(Vector3 position, float radius)
+        {
+            GameObject prefab = Util.GetHiddenPrefab("mud_road_v2");
+
+            Make(prefab, position, radius, Operation.Level);
+        }
+
+        public static void Raise(Vector3 position, float radius, float height, float strength = 0.01f)
+        {
+            GameObject prefab = Util.GetHiddenPrefab("raise_v2");
+
+            Make(prefab, position, radius, Operation.Raise, height, strength);
+        }
+
+        public static void Lower(Vector3 position, float radius, float depth, float strength = 0.01f)
+        {
+            GameObject prefab = Util.GetHiddenPrefab("digg_v3");
+
+            Make(prefab, position, radius, Operation.Lower, depth, strength);
+        }
+
+        public static void Smooth(Vector3 position, float radius, float strength = 0.5f)
+        {
+            GameObject prefab = Util.GetHiddenPrefab("mud_road_v2");
+
+            Make(prefab, position, radius, Operation.Smooth, strength);
+        }
+
+        public static void Paint(Vector3 position, float radius, TerrainModifier.PaintType type)
+        {
+            GameObject prefab = null;
+
+            if (type == TerrainModifier.PaintType.Dirt)
+                prefab = Util.GetHiddenPrefab("mud_road_v2");
+            else if (type == TerrainModifier.PaintType.Paved)
+                prefab = Util.GetHiddenPrefab("paved_road_v2");
+            else if (type == TerrainModifier.PaintType.Reset)
+                prefab = Util.GetHiddenPrefab("replant_v2");
+            else if (type == TerrainModifier.PaintType.Cultivate)
+                prefab = Util.GetHiddenPrefab("cultivate_v2");
+            else
+                return;
+
+            Make(prefab, position, radius, Operation.Paint);
+        }
+
+        public static void Reset(Vector3 position, float radius)
+        {
+            // Remove all Terrain V2 edits. These are typically done by mods,
+            // or are present in very old save files that haven't run the "optterrain" console command.
+            foreach (var obj in TerrainModifier.GetAllInstances())
+            {
+                if (Utils.DistanceXZ(position, obj.transform.position) <= radius)
+                {
+                    ZNetView netView = obj.GetComponent<ZNetView>();
+
+                    if (netView == null)
+                        continue;
+
+                    netView.ClaimOwnership();
+                    netView.Destroy();
+                }
+            }
+
+            List<Heightmap> heightmaps = new List<Heightmap>();
+            Heightmap.FindHeightmap(position, radius + 50f, heightmaps);
+
+            bool resetGrass = false;
+
+            foreach (Heightmap heightmap in heightmaps)
+            {
+                bool modified = false;
+                TerrainComp compiler = TerrainComp.FindTerrainCompiler(heightmap.transform.position);
+
+                if (compiler == null)
+                    continue;
+
+                if (!compiler.GetPrivateField<bool>("m_initialized"))
+                    continue;
+
+                heightmap.WorldToVertex(position, out int x, out int y);
+
+                int     width          = compiler.GetPrivateField<int>("m_width");
+                float[] levelDelta     = compiler.GetPrivateField<float[]>("m_levelDelta");
+                float[] smoothDelta    = compiler.GetPrivateField<float[]>("m_smoothDelta");
+                bool[]  modifiedHeight = compiler.GetPrivateField<bool[]>("m_modifiedHeight");
+                Color[] paintMask      = compiler.GetPrivateField<Color[]>("m_paintMask");
+                bool[]  modifiedPaint  = compiler.GetPrivateField<bool[]>("m_modifiedPaint");
+
+                for (int h = 0; h <= width; ++h)
+                {
+                    for (int w = 0; w <= width; ++w)
+                    {
+                        if (Util.Distance2D(x, y, w, h) > radius)
+                            continue;
+
+                        int heightIndex = w + (h * (width + 1));
+
+                        if (modifiedHeight[heightIndex])
+                        {
+                            modifiedHeight[heightIndex] = false;
+                            levelDelta[heightIndex] = 0;
+                            smoothDelta[heightIndex] = 0;
+                            modified = true;
+                            resetGrass = true;
+                        }
+
+                        if (h < width && w < width)
+                        {
+                            int paintIndex = w + (h * width);
+
+                            if (modifiedPaint[paintIndex])
+                            {
+                                modifiedPaint[paintIndex] = false;
+                                paintMask[paintIndex] = Color.clear;
+                                modified = true;
+                                resetGrass = true;
+                            }
+                        }
+                    }
+                }
+
+                if (!modified)
+                    continue;
+
+                compiler.SetPrivateField("m_width", width);
+                compiler.SetPrivateField("m_levelDelta", levelDelta);
+                compiler.SetPrivateField("m_smoothDelta", smoothDelta);
+                compiler.SetPrivateField("m_modifiedHeight", modifiedHeight);
+                compiler.SetPrivateField("m_paintMask", paintMask);
+                compiler.SetPrivateField("m_modifiedPaint", modifiedPaint);
+
+                compiler.InvokePrivate<object>("Save");
+                heightmap.Poke(true);
+            }
+
+            if (ClutterSystem.instance != null && resetGrass)
+                ClutterSystem.instance.ResetGrass(position, radius);
+        }
+
+        private static void Make(GameObject prefab, Vector3 position, float radius, Operation op, params object[] args)
+        {
+            // This might stop some of the particle spam when making terrain mods.
+            TerrainModifier.SetTriggerOnPlaced(false);
+            bool wasActive = prefab.activeSelf || prefab.activeInHierarchy;
+            // All the terrain prefabs we're using apply terrain modifications the moment they spawn.
+            // We want to modify the operation before it's applied, so disabling the object before instantiating it
+            // allows us to delay the Awake() method.
+            prefab.SetActive(false);
+            TerrainOp mod = prefab.GetComponentInChildren<TerrainOp>();
+
+            // Some ground pieces spawn with an offset. Account for it.
+            float levelOffset = mod.m_settings.m_levelOffset;
+
+            GameObject spawned = UnityEngine.Object.Instantiate(prefab, position - Vector3.up * levelOffset, Quaternion.identity);
+            // Restore the original prefab to its active state since we disabled it before making a clone.
+            prefab.SetActive(wasActive);
+
+            mod = spawned.GetComponentInChildren<TerrainOp>();
+
+            // Delete all the smoke/rock/dirt particle effects on spawn.
+            mod.m_onPlacedEffect = new EffectList();
+
+            // Modify terrain settings.
+            mod.m_settings.m_square = false;
+
+            if (op == Operation.Level)
+            {
+                mod.m_settings.m_level = true;
+                mod.m_settings.m_levelRadius = radius;
+                mod.m_settings.m_levelOffset = 0f;
+                mod.m_settings.m_smooth = false;
+            }
+            else if (op == Operation.Raise || op == Operation.Lower)
+            {
+                mod.m_settings.m_raise = true;
+                mod.m_settings.m_raiseRadius = radius;
+                mod.m_settings.m_raiseDelta = (float)args[0];
+                mod.m_settings.m_raisePower = 0.01f;
+
+                if (op == Operation.Lower)
+                    mod.m_settings.m_raiseDelta *= -1f;
+            }
+            else if (op == Operation.Smooth)
+            {
+                mod.m_settings.m_level = false;
+                mod.m_settings.m_smooth = true;
+                mod.m_settings.m_smoothPower = (float)args[0];
+            }
+            else if (op == Operation.Paint)
+            {
+                mod.m_settings.m_level = false;
+                mod.m_settings.m_smooth = false;
+                mod.m_settings.m_raise = false;
+            }
+
+            mod.m_settings.m_paintRadius = radius;
+            mod.m_settings.m_smoothRadius = radius;
+
+            // All done, let Unity call Awake() and stuff.
+            spawned.SetActive(true);
         }
     }
 }

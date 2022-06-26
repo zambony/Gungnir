@@ -39,6 +39,7 @@ namespace Gungnir
     {
         private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
         private const string s_commandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
+        private static Dictionary<string, GameObject> s_cachedPrefabs = new Dictionary<string, GameObject>();
 
         /// <summary>
         /// Split a string up into individual words. Phrases surrounded by quotes will count as a single item.
@@ -177,6 +178,33 @@ namespace Gungnir
         public static string Simplified(this string value)
         {
             return Regex.Replace(value.Trim(), @"\s{2,}", " ");
+        }
+
+        /// <summary>
+        /// Some of Valheim's prefabs are not listed in the ZNetScene manager. If you know the name of them,
+        /// use this function to find them in the scene hierarchy and instantiate them.
+        /// </summary>
+        /// <param name="name">Prefab name.</param>
+        /// <returns>The prefab.</returns>
+        public static GameObject GetHiddenPrefab(string name)
+        {
+            if (s_cachedPrefabs.TryGetValue(name.ToLower(), out GameObject ret))
+                return ret;
+
+            var objects = Resources.FindObjectsOfTypeAll<Transform>()
+                .Where(t => t.parent == null)
+                .Select(x => x.gameObject);
+
+            foreach (var prefab in objects)
+            {
+                if (prefab.name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    s_cachedPrefabs.Add(name.ToLower(), prefab);
+                    return prefab;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -364,6 +392,28 @@ namespace Gungnir
         public static T GetPrivateField<T>(this object self, string field)
         {
             return (T)self.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(self);
+        }
+
+        public static void SetPrivateField<T>(this object self, string field, T value)
+        {
+            self.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).SetValue(self, value);
+        }
+
+        public static T StaticInvokePrivate<T>(Type type, string method, params object[] args)
+        {
+            return (T)type.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
+        }
+
+        public static T InvokePrivate<T>(this object self, string method, params object[] args)
+        {
+            return (T)self.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Invoke(self, args);
+        }
+
+        public static float Distance2D(float x1, float y1, float x2, float y2)
+        {
+            float a = x2 - x1;
+            float b = y2 - y1;
+            return Mathf.Sqrt(a * a + b * b);
         }
     }
 }
