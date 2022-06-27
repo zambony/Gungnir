@@ -16,7 +16,7 @@ namespace Gungnir
         public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
-        public const string ModVersion = "1.2.3";
+        public const string ModVersion = "1.3.0";
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
@@ -106,7 +106,13 @@ namespace Gungnir
 
         void Update()
         {
-            if (Console.IsVisible() || (Chat.instance != null && Chat.instance.HasFocus()))
+            // Disable keybinds while in text inputs or menus.
+            if (Console.IsVisible() ||
+                (Chat.instance != null && Chat.instance.HasFocus()) ||
+                TextInput.IsVisible() ||
+                Minimap.InTextInput() ||
+                Menu.IsVisible() ||
+                InventoryGui.IsVisible())
                 return;
 
             foreach (KeyValuePair<KeyCode, string> pair in m_binds)
