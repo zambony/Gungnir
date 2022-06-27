@@ -1394,7 +1394,7 @@ namespace Gungnir
                 mod.m_settings.m_raise = true;
                 mod.m_settings.m_raiseRadius = radius;
                 mod.m_settings.m_raiseDelta = (float)args[0];
-                mod.m_settings.m_raisePower = 0.01f;
+                mod.m_settings.m_raisePower = (float)args[1];
 
                 if (op == Operation.Lower)
                     mod.m_settings.m_raiseDelta *= -1f;
