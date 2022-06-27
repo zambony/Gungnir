@@ -819,6 +819,11 @@ namespace Gungnir
                 Logger.Error("Radius must be greater than 0.", true);
                 return;
             }
+            else if (radius > 50f)
+            {
+                Logger.Error("To avoid crashing your or another player's game, your radius will be clamped to 50.", true);
+                radius = 50f;
+            }
 
             Ground.Level(Player.m_localPlayer.transform.position, radius);
             Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) leveled.", true);
@@ -831,6 +836,11 @@ namespace Gungnir
             {
                 Logger.Error("Radius must be greater than 0.", true);
                 return;
+            }
+            else if (radius > 50f)
+            {
+                Logger.Error("To avoid crashing your or another player's game, your radius will be clamped to 50.", true);
+                radius = 50f;
             }
 
             if (depth <= 0f)
@@ -857,6 +867,11 @@ namespace Gungnir
                 Logger.Error("Radius must be greater than 0.", true);
                 return;
             }
+            else if (radius > 50f)
+            {
+                Logger.Error("To avoid crashing your or another player's game, your radius will be clamped to 50.", true);
+                radius = 50f;
+            }
 
             if (!Enum.TryParse(paintType, true, out TerrainModifier.PaintType type))
             {
@@ -875,6 +890,11 @@ namespace Gungnir
             {
                 Logger.Error("Radius must be greater than 0.", true);
                 return;
+            }
+            else if (radius > 50f)
+            {
+                Logger.Error("To avoid crashing your or another player's game, your radius will be clamped to 50.", true);
+                radius = 50f;
             }
 
             if (height <= 0f)
@@ -901,6 +921,11 @@ namespace Gungnir
                 Logger.Error("Radius must be greater than 0.", true);
                 return;
             }
+            else if (radius > 50f)
+            {
+                Logger.Error("To avoid crashing your or another player's game, your radius will be clamped to 50.", true);
+                radius = 50f;
+            }
 
             Ground.Reset(Player.m_localPlayer.transform.position, radius);
             Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) reset.", true);
@@ -913,6 +938,11 @@ namespace Gungnir
             {
                 Logger.Error("Radius must be greater than 0.", true);
                 return;
+            }
+            else if (radius > 50f)
+            {
+                Logger.Error("To avoid crashing your or another player's game, your radius will be clamped to 50.", true);
+                radius = 50f;
             }
 
             if (strength <= 0f)
