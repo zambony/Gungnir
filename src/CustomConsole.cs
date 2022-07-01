@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,21 +14,30 @@ namespace Gungnir
     internal class CustomConsole : MonoBehaviour
     {
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        private const string s_argPattern = @"((?:<[^>]+>)|(?:\[[^\]]+\]))";
 
         // GUI Style values.
         private const int s_maxHistory         = 1000;
         private const int s_fontSize           = 16;
         private const int s_historyEntryMargin = 10;
+        private static Color s_backgroundColor = new Color32(42, 47, 58, 165);
         private GUIStyle  m_consoleStyle       = new GUIStyle();
 
         // History-related values.
         private List<string> m_history        = new List<string>();
-        private List<string> m_commandHistory = new List<string>();
 
         // GUI drawing variables.
         private Vector2 m_scrollPosition = new Vector2(0, int.MaxValue);
         private string  m_currentText    = string.Empty;
+        private int     m_caretPos       = 0;
+        private float   m_hintAlpha      = 0f;
+        private float   m_hintAlphaVel   = 0f;
         private Rect    m_windowRect;
+        private Image   m_background;
+
+        // Command completion/hints.
+        private CommandMeta m_currentCommand;
+        private string      m_currentHint = string.Empty;
 
         // Flags.
         private bool m_foundConsoleInstance = false;
@@ -104,6 +114,7 @@ namespace Gungnir
             m_consoleStyle.font = font;
             m_consoleStyle.normal.textColor = Color.white;
             m_consoleStyle.richText = true;
+            m_consoleStyle.alignment = TextAnchor.UpperLeft;
 
             if (Console.instance)
             {
@@ -123,9 +134,8 @@ namespace Gungnir
 
                 if (background)
                 {
-                    ColorUtility.TryParseHtmlString("#2A2F3A", out Color color);
-                    color.a = 0.65f;
-                    background.color = color;
+                    m_background = background;
+                    background.color = s_backgroundColor;
                 }
 
                 Console.instance.m_output.font = font;
@@ -160,9 +170,90 @@ namespace Gungnir
 
             // Create it again because I'm a lazy bastard.
             CreateStyle();
+
+            Console.instance.m_input.onValueChanged.RemoveListener(OnInputChanged);
+            Console.instance.m_input.onValueChanged.AddListener(OnInputChanged);
         }
 
-        private void UpdateConsole()
+        private void OnInputChanged(string text)
+        {
+            m_currentText = text;
+
+            var split = text.Split();
+
+            if (split.Length == 0)
+                return;
+
+            string command = split[0];
+
+            m_currentCommand = Handler.GetCommand(command);
+        }
+
+        private void UpdateCommandHint()
+        {
+            if (m_currentCommand == null)
+                return;
+
+            if (m_currentCommand.arguments.Count == 0)
+            {
+                m_currentHint = string.Empty;
+                return;
+            }
+
+            // Split the hint string into pieces so we can add color or boldness to each one.
+            var splitHints = Util.SplitByPattern(m_currentCommand.hint, s_argPattern);
+            // Split each argument manually, because we SplitByQuotes does not preserve the quotations, or return the match list.
+            // We want the quotation marks so we can see exactly where in the string an argument starts/ends.
+            var splitArgs = Regex.Matches(m_currentText, Util.CommandPattern).OfType<Match>().Skip(1).ToArray();
+
+            int currentArg = 0;
+
+            string final = "";
+
+            for (int i = 0; i < splitArgs.Length; ++i)
+            {
+                var match = splitArgs[i];
+                var group = match.Groups[0];
+                int groupEnd = group.Index + group.Length;
+
+                // If our caret is before the end of this argument, and the argument the caret is touching
+                // is not beyond the number of argument hints we have, select this argument as the one to highlight.
+                if (m_caretPos <= groupEnd && i < splitHints.Count)
+                {
+                    currentArg = i;
+                    break;
+                }
+                // If our caret is past the last character of our current argument (e.g. the user inserted a space
+                // after the argument), assume the next argument is what we're targeting, but only if there is a next argument to
+                // use.
+                else if (m_caretPos > groupEnd && i + 1 < splitHints.Count)
+                {
+                    currentArg = i + 1;
+                }
+                // Otherwise, we're probably entering an array argument and typing multiple things, so mark the last argument
+                // as the current one.
+                else if (i >= splitHints.Count)
+                {
+                    currentArg = splitHints.Count - 1;
+                    break;
+                }
+            }
+
+            // Apply coloring/highlighting to each hint.
+            for (int i = 0; i < splitHints.Count; ++i)
+            {
+                var hint = splitHints[i];
+
+                if (i == currentArg)
+                    final += "<b>" + hint.WithColor(Logger.GoodColor) + "</b> ";
+                else
+                    final += hint.WithColor(new Color(0.8f, 0.8f, 0.8f)) + " ";
+            }
+
+            m_currentHint = $"{("/" + m_currentCommand.data.keyword).WithColor(Logger.WarningColor)} {final.Trim()}\n{m_currentCommand.data.description}";
+        }
+
+        private void Update()
         {
             if (!m_foundConsoleInstance && Console.instance)
             {
@@ -185,6 +276,12 @@ namespace Gungnir
                 m_foundChatInstance = false;
             }
 
+            if (m_caretPos != Console.instance.m_input.caretPosition)
+            {
+                m_caretPos = Console.instance.m_input.caretPosition;
+                UpdateCommandHint();
+            }
+
             List<string> currentBuffer = GetConsoleBuffer();
 
             if (currentBuffer.Count > 0)
@@ -199,22 +296,6 @@ namespace Gungnir
                 Console.instance.m_output.text = string.Empty;
                 m_scrollPosition = new Vector2(0, int.MaxValue);
             }
-
-            if (Console.IsVisible())
-            {
-                m_currentText = Console.instance.m_input.text;
-
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-                {
-                    if (!string.IsNullOrEmpty(m_currentText))
-                    {
-                        // Log this command to history.
-                        m_commandHistory.Add(Util.StripTags(m_currentText));
-                        // Delete the currently tracked text.
-                        m_currentText = string.Empty;
-                    }
-                }
-            }
         }
 
         private void OnGUI()
@@ -223,6 +304,38 @@ namespace Gungnir
             {
                 // Not reassigning windowRect because we do not want to allow the user to drag the window.
                 GUILayout.Window(5001, m_windowRect, DrawConsole, "Gungnir " + Gungnir.ModVersion, m_consoleStyle);
+
+                float curAlpha = m_hintAlpha;
+
+                if (m_currentCommand == null || string.IsNullOrEmpty(m_currentText))
+                    m_hintAlpha = Mathf.SmoothDamp(m_hintAlpha, 0f, ref m_hintAlphaVel, 0.2f);
+                else
+                    m_hintAlpha = Mathf.SmoothDamp(m_hintAlpha, 1f, ref m_hintAlphaVel, 0.2f);
+
+                if (Mathf.Approximately(m_hintAlpha, 0f))
+                    return;
+
+                GUIContent content;
+                if (m_hintAlpha != curAlpha)
+                    content = new GUIContent(Util.SetColorTagAlpha(m_currentHint, m_hintAlpha));
+                else
+                    content = new GUIContent(m_currentHint);
+
+                Color oldColor = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, m_hintAlpha);
+                // I don't want to deal with auto layout stuff, so I will draw the command help exactly
+                // where I want it :)
+                Vector2 contentSize = m_consoleStyle.CalcSize(content);
+                float height = m_consoleStyle.CalcHeight(content, contentSize.x);
+                const float margin = 10f;
+
+                GUITools.DrawRect(new Rect(m_windowRect.x - margin, m_background.rectTransform.rect.height + 30f, contentSize.x + (margin * 2), height + (margin * 2)), s_backgroundColor);
+                GUI.Label(
+                    new Rect(m_windowRect.x, m_background.rectTransform.rect.height + 30f + margin, m_windowRect.width, LineHeight * 2f),
+                    content,
+                    m_consoleStyle
+                );
+                GUI.color = oldColor;
             }
         }
 
@@ -251,10 +364,27 @@ namespace Gungnir
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
         }
+    }
 
-        private void Update()
+    public static class GUITools
+    {
+        private static readonly Texture2D backgroundTexture = Texture2D.whiteTexture;
+        private static readonly GUIStyle textureStyle = new GUIStyle { normal = new GUIStyleState { background = backgroundTexture } };
+
+        public static void DrawRect(Rect position, Color color, GUIContent content = null)
         {
-            UpdateConsole();
+            var backgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = color;
+            GUI.Box(position, content ?? GUIContent.none, textureStyle);
+            GUI.backgroundColor = backgroundColor;
+        }
+
+        public static void LayoutBox(Color color, GUIContent content = null)
+        {
+            var backgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = color;
+            GUILayout.Box(content ?? GUIContent.none, textureStyle);
+            GUI.backgroundColor = backgroundColor;
         }
     }
 }

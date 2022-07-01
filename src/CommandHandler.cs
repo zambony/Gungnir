@@ -574,6 +574,13 @@ namespace Gungnir
             Logger.Log($"No build restrictions: {(Plugin.BuildAnywhere ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
+        [Command("noslide", "Toggle the ability to walk up steep angles without sliding.")]
+        public void ToggleNoSlide()
+        {
+            Plugin.NoSlide = !Plugin.NoSlide;
+            Logger.Log($"No slide: {(Plugin.NoSlide ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
         [Command("nosup", "Toggle the need for structural support.")]
         public void ToggleNoSupport()
         {
@@ -594,6 +601,7 @@ namespace Gungnir
         public void Puke()
         {
             Player.m_localPlayer.ClearFood();
+            Logger.Log("Food buffs cleared.", true);
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
@@ -1230,7 +1238,26 @@ namespace Gungnir
 
             Logger.Log("Running command " + command.data.keyword);
             // Invoke the method, which will expand all the arguments automagically.
-            command.method.Invoke(this, convertedArgs.ToArray());
+            try
+            {
+                command.method.Invoke(this, convertedArgs.ToArray());
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Something happened while running {command.data.keyword.WithColor(Color.white)}, check the BepInEx console for more details.", true);
+                throw;
+            }
+        }
+
+        public CommandMeta GetCommand(string commandName)
+        {
+            if (!commandName.StartsWith("/"))
+                commandName = "/" + commandName;
+
+            if (!m_actions.TryGetValue(commandName, out CommandMeta command))
+                return null;
+
+            return command;
         }
     }
 

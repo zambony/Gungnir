@@ -38,8 +38,24 @@ namespace Gungnir
     internal static class Util
     {
         private static readonly Regex s_tagStripPattern = new Regex(@"<((?:b)|(?:i)|(?:size)|(?:color)|(?:quad)|(?:material)).*?>(.*?)<\/\1>");
-        private const string s_commandPattern = @"(?:(?<="").+(?=""))|(?:[^""\s]+)";
+        private static readonly Regex s_colorTagPattern = new Regex(@"<color=#(\w{6})(\w{2})?>");
+        private const string s_commandPattern = @"[^\s""']+|""([^""]*)""|'([^']*)'";
         private static Dictionary<string, GameObject> s_cachedPrefabs = new Dictionary<string, GameObject>();
+
+        public static string CommandPattern => s_commandPattern;
+
+        public static string SetColorTagAlpha(string text, float alpha)
+        {
+            return s_colorTagPattern.Replace(text, m =>
+            {
+                string oldAlpha = m.Groups[2].Value;
+                if (string.IsNullOrEmpty(oldAlpha))
+                    oldAlpha = "FF";
+
+                string newAlpha = ((int)(alpha * Convert.ToByte(oldAlpha, 16))).ToString("X2");
+                return $"<color=#{m.Groups[1].Value}{newAlpha}>";
+            });
+        }
 
         /// <summary>
         /// Split a string up into individual words. Phrases surrounded by quotes will count as a single item.
@@ -49,6 +65,27 @@ namespace Gungnir
         public static List<string> SplitByQuotes(string text)
         {
             return Regex.Matches(text, s_commandPattern)
+                .OfType<Match>()
+                .Select(m => {
+                    if (!string.IsNullOrEmpty(m.Groups[1].Value))
+                        return m.Groups[1].Value;
+                    else if (!string.IsNullOrEmpty(m.Groups[2].Value))
+                        return m.Groups[2].Value;
+                    else
+                        return m.Value;
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Generic version of <see cref="SplitByQuotes(string)"/>.
+        /// </summary>
+        /// <param name="text">Text to separate.</param>
+        /// <param name="pattern">Pattern to use.</param>
+        /// <returns>A <see cref="List{string}"/> containing the separated pieces.</returns>
+        public static List<string> SplitByPattern(string text, string pattern)
+        {
+            return Regex.Matches(text, pattern)
                 .OfType<Match>()
                 .Select(m => m.Groups[0].Value)
                 .ToList();
