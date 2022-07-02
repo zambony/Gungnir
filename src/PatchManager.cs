@@ -155,5 +155,38 @@ namespace Gungnir.Patch
                 return true;
             }
         }
+
+        [HarmonyPatch(typeof(Character), "GetSlideAngle")]
+        public static class SpidermanSlidePatch
+        {
+            private static void Postfix(ref float __result, ref ZNetView ___m_nview)
+            {
+                if (Plugin.NoSlide && ___m_nview.IsOwner())
+                    __result = 90f;
+            }
+        }
+
+        [HarmonyPatch(typeof(Character), "UpdateBodyFriction")]
+        public static class SpidermanFrictionPatch
+        {
+            private static void Postfix(ref Collider ___m_collider, ref Vector3 ___m_moveDir, ref ZNetView ___m_nview)
+            {
+                if (Plugin.NoSlide && ___m_nview.IsOwner())
+                {
+                    if (___m_moveDir.magnitude < 0.1f)
+                    {
+                        ___m_collider.material.frictionCombine = PhysicMaterialCombine.Maximum;
+                        ___m_collider.material.staticFriction = 1f;
+                        ___m_collider.material.dynamicFriction = 1f;
+                    }
+                    else
+                    {
+                        ___m_collider.material.frictionCombine = PhysicMaterialCombine.Minimum;
+                        ___m_collider.material.staticFriction = 0f;
+                        ___m_collider.material.dynamicFriction = 0f;
+                    }
+                }
+            }
+        }
     }
 }

@@ -574,6 +574,13 @@ namespace Gungnir
             Logger.Log($"No build restrictions: {(Plugin.BuildAnywhere ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
+        [Command("noslide", "Toggle the ability to walk up steep angles without sliding.")]
+        public void ToggleNoSlide()
+        {
+            Plugin.NoSlide = !Plugin.NoSlide;
+            Logger.Log($"No slide: {(Plugin.NoSlide ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+        }
+
         [Command("nosup", "Toggle the need for structural support.")]
         public void ToggleNoSupport()
         {
@@ -594,6 +601,7 @@ namespace Gungnir
         public void Puke()
         {
             Player.m_localPlayer.ClearFood();
+            Logger.Log("Food buffs cleared.", true);
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
@@ -931,6 +939,26 @@ namespace Gungnir
             Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) reset.", true);
         }
 
+        [Command("tshape", "Choose the shape of terrain modifications with 'circle' or 'square'.")]
+        public void TerrainShape(string shape)
+        {
+            if (shape.Equals("square", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("box", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("cube", StringComparison.OrdinalIgnoreCase))
+                Ground.square = true;
+            else if (shape.Equals("circle", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("sphere", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("round", StringComparison.OrdinalIgnoreCase))
+                Ground.square = false;
+            else
+            {
+                Logger.Error($"Only {"square".WithColor(Color.white)} and {"circle".WithColor(Color.white)} are acceptable values.", true);
+                return;
+            }
+
+            Logger.Log($"Terrain modification shape: {(Ground.square ? "square".WithColor(Logger.GoodColor) : "circle".WithColor(Logger.GoodColor))}", true);
+        }
+
         [Command("tsmooth", "Smooth terrain in a radius with some strength. Higher strengths mean more aggressive smoothing.")]
         public void TerrainSmooth(float radius = 10f, float strength = 0.5f)
         {
@@ -1230,7 +1258,26 @@ namespace Gungnir
 
             Logger.Log("Running command " + command.data.keyword);
             // Invoke the method, which will expand all the arguments automagically.
-            command.method.Invoke(this, convertedArgs.ToArray());
+            try
+            {
+                command.method.Invoke(this, convertedArgs.ToArray());
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"Something happened while running {command.data.keyword.WithColor(Color.white)}, check the BepInEx console for more details.", true);
+                throw;
+            }
+        }
+
+        public CommandMeta GetCommand(string commandName)
+        {
+            if (!commandName.StartsWith("/"))
+                commandName = "/" + commandName;
+
+            if (!m_actions.TryGetValue(commandName, out CommandMeta command))
+                return null;
+
+            return command;
         }
     }
 
@@ -1245,6 +1292,8 @@ namespace Gungnir
             Smooth,
             Paint
         }
+
+        public static bool square = false;
 
         public static void Level(Vector3 position, float radius)
         {
@@ -1410,7 +1459,7 @@ namespace Gungnir
             mod.m_onPlacedEffect = new EffectList();
 
             // Modify terrain settings.
-            mod.m_settings.m_square = false;
+            mod.m_settings.m_square = square;
 
             if (op == Operation.Level)
             {
