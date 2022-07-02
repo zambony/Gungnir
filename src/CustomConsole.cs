@@ -337,6 +337,10 @@ namespace Gungnir
                 );
                 GUI.color = oldColor;
             }
+            else
+            {
+                m_hintAlpha = 0f;
+            }
         }
 
         private void DrawConsole(int windowID)
