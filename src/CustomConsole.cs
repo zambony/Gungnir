@@ -186,17 +186,21 @@ namespace Gungnir
 
             string command = split[0];
 
+            // Don't bother, it's not ours.
+            if (!command.StartsWith("/"))
+                return;
+
             m_currentCommand = Handler.GetCommand(command);
         }
 
         private void UpdateCommandHint()
         {
-            if (m_currentCommand == null)
+            if (m_currentCommand == null || string.IsNullOrEmpty(m_currentText))
                 return;
 
-            if (m_currentCommand.arguments.Count == 0)
+            if (string.IsNullOrEmpty(m_currentCommand.hint))
             {
-                m_currentHint = string.Empty;
+                m_currentHint = $"{("/" + m_currentCommand.data.keyword).WithColor(Logger.WarningColor)}\n{m_currentCommand.data.description}";
                 return;
             }
 

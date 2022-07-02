@@ -939,6 +939,26 @@ namespace Gungnir
             Logger.Log($"Terrain within {radius.ToString().WithColor(Logger.GoodColor)} meter(s) reset.", true);
         }
 
+        [Command("tshape", "Choose the shape of terrain modifications with 'circle' or 'square'.")]
+        public void TerrainShape(string shape)
+        {
+            if (shape.Equals("square", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("box", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("cube", StringComparison.OrdinalIgnoreCase))
+                Ground.square = true;
+            else if (shape.Equals("circle", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("sphere", StringComparison.OrdinalIgnoreCase) ||
+                shape.Equals("round", StringComparison.OrdinalIgnoreCase))
+                Ground.square = false;
+            else
+            {
+                Logger.Error($"Only {"square".WithColor(Color.white)} and {"circle".WithColor(Color.white)} are acceptable values.", true);
+                return;
+            }
+
+            Logger.Log($"Terrain modification shape: {(Ground.square ? "square".WithColor(Logger.GoodColor) : "circle".WithColor(Logger.GoodColor))}", true);
+        }
+
         [Command("tsmooth", "Smooth terrain in a radius with some strength. Higher strengths mean more aggressive smoothing.")]
         public void TerrainSmooth(float radius = 10f, float strength = 0.5f)
         {
@@ -1273,6 +1293,8 @@ namespace Gungnir
             Paint
         }
 
+        public static bool square = false;
+
         public static void Level(Vector3 position, float radius)
         {
             GameObject prefab = Util.GetHiddenPrefab("mud_road_v2");
@@ -1437,7 +1459,7 @@ namespace Gungnir
             mod.m_onPlacedEffect = new EffectList();
 
             // Modify terrain settings.
-            mod.m_settings.m_square = false;
+            mod.m_settings.m_square = square;
 
             if (op == Operation.Level)
             {
