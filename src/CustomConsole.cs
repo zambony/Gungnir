@@ -315,9 +315,12 @@ namespace Gungnir
                 if (Mathf.Approximately(m_hintAlpha, 0f))
                     return;
 
+                // Please pay no attention to the fact I'm regex replacing the contents of a string every frame.
+                // Unity UI work is painfully bad to do through code and the only thing that can affect the alpha of colored RichText
+                // is the alpha byte of RichText color tags. This is the only spot I'll do this, so forgive me D:
                 GUIContent content;
                 if (m_hintAlpha != curAlpha)
-                    content = new GUIContent(Util.SetColorTagAlpha(m_currentHint, m_hintAlpha));
+                    content = new GUIContent(Util.MultiplyColorTagAlpha(m_currentHint, m_hintAlpha));
                 else
                     content = new GUIContent(m_currentHint);
 

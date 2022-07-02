@@ -44,7 +44,14 @@ namespace Gungnir
 
         public static string CommandPattern => s_commandPattern;
 
-        public static string SetColorTagAlpha(string text, float alpha)
+        /// <summary>
+        /// Multiplies the alpha byte of all color tags in a rich text string by <paramref name="alpha"/> and
+        /// returns a new string with the new alpha.
+        /// </summary>
+        /// <param name="text">RichText with color tags that need their alpha modified.</param>
+        /// <param name="alpha">Multiplier for the alpha.</param>
+        /// <returns>A <see langword="string"/> with all color tag alphas modified.</returns>
+        public static string MultiplyColorTagAlpha(string text, float alpha)
         {
             return s_colorTagPattern.Replace(text, m =>
             {
