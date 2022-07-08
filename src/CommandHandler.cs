@@ -108,12 +108,16 @@ namespace Gungnir
     internal class CommandHandler
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
-        private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        private Dictionary<string, string> m_aliases = new Dictionary<string, string>();
+
         private CustomConsole m_console = null;
         private Gungnir m_plugin = null;
 
+        private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
         internal CustomConsole Console { get => m_console; set => m_console = value; }
         internal Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
+        public Dictionary<string, string> Aliases { get => m_aliases; set => m_aliases = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
@@ -122,6 +126,35 @@ namespace Gungnir
         private static List<string> GetPrefabNames()
         {
             return ZNetScene.instance?.GetPrefabNames();
+        }
+
+        [Command("alias", "Create a shortcut or alternate name for a command, or sequence of commands.")]
+        public void Alias(string name, params string[] commandText)
+        {
+            if (name.Contains(" "))
+            {
+                Logger.Error("An alias cannot contain spaces.", true);
+                return;
+            }
+
+            if (m_actions.ContainsKey(name))
+            {
+                Logger.Error($"{name.WithColor(Color.white)} is a Gungnir command and cannot be overwritten.", true);
+                return;
+            }
+            else if (Util.GetPrivateStaticField<Dictionary<string, Terminal.ConsoleCommand>>(typeof(Terminal), "commands").ContainsKey(name))
+            {
+                Logger.Error($"{name.WithColor(Color.white)} is a built-in Valheim command and cannot be overwritten.", true);
+                return;
+            }
+
+            if (m_aliases.ContainsKey(name))
+                m_aliases.Remove(name);
+
+            string cmd = string.Join(" ", commandText);
+            m_aliases.Add(name, cmd);
+
+            Logger.Log($"Alias {name.WithColor(Logger.WarningColor)} created for {cmd.WithColor(Logger.WarningColor)}", true);
         }
 
         [Command("bind", "Bind a console command to a key. See the Unity documentation for KeyCode names.")]
@@ -390,6 +423,32 @@ namespace Gungnir
             }
         }
 
+        [Command("listaliases", "List all of your custom aliases, or check what a specific alias does.")]
+        public void ListAliases(string alias = null)
+        {
+            if (m_aliases.Count == 0)
+            {
+                Logger.Error($"You have no aliases currently set. Use {"/alias".WithColor(Color.white)} to add some.", true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(alias))
+            {
+                foreach (var pair in m_aliases)
+                    global::Console.instance.Print($"{pair.Key} = {pair.Value.WithColor(Logger.WarningColor)}");
+
+                return;
+            }
+
+            if (!m_aliases.TryGetValue(alias, out string cmd))
+            {
+                Logger.Error($"The alias {alias.WithColor(Color.white)} does not exist.", true);
+                return;
+            }
+
+            global::Console.instance.Print($"{alias} = {cmd.WithColor(Logger.WarningColor)}");
+        }
+
         [Command("listbinds", "List all of your custom keybinds, or check what an individual keycode is bound to.")]
         public void ListBinds(string keyCode = null)
         {
@@ -401,7 +460,7 @@ namespace Gungnir
 
             if (string.IsNullOrEmpty(keyCode))
             {
-                foreach (KeyValuePair<KeyCode, string> pair in Plugin.Binds)
+                foreach (var pair in Plugin.Binds)
                     global::Console.instance.Print($"{pair.Key} = {pair.Value.WithColor(Logger.WarningColor)}");
 
                 return;
@@ -1004,6 +1063,35 @@ namespace Gungnir
             Logger.Log("Woosh!", true);
         }
 
+        [Command("unalias", "Remove an alias you've created.")]
+        public void Unalias(string alias)
+        {
+            if (m_aliases.ContainsKey(alias))
+            {
+                m_aliases.Remove(alias);
+                Logger.Log($"Alias {alias.WithColor(Logger.GoodColor)} deleted.", true);
+
+                return;
+            }
+
+            Logger.Error($"No alias named {alias.WithColor(Color.white)} exists.", true);
+        }
+
+        [Command("unaliasall", "Removes all of your custom command aliases. Requires a true/1/yes as parameter to confirm you mean it.")]
+        public void UnaliasAll(bool confirm)
+        {
+            if (!confirm)
+            {
+                Logger.Error("Your aliases are safe.", true);
+                return;
+            }
+
+            m_aliases.Clear();
+            Plugin.SaveAliases();
+
+            Logger.Log("All of your aliases have been cleared.", true);
+        }
+
         [Command("unbind", "Removes a custom keybind.")]
         public void Unbind(string keyCode)
         {
@@ -1030,7 +1118,7 @@ namespace Gungnir
         {
             if (!confirm)
             {
-                Logger.Error("Your binds will continue to live...", true);
+                Logger.Error("Your binds are safe.", true);
                 return;
             }
 
@@ -1148,7 +1236,7 @@ namespace Gungnir
 
                 new Terminal.ConsoleCommand("/" + command.data.keyword, helpText, delegate (Terminal.ConsoleEventArgs args)
                 {
-                    ParseAndRun(args.FullLine);
+                    Run(args.FullLine);
                 }, optionsFetcher: fetcher);
                 Logger.Log($"Registered command {command.data.keyword}");
             }
@@ -1162,10 +1250,13 @@ namespace Gungnir
         /// parameters, then run the command.
         /// </summary>
         /// <param name="text">Command string to evaluate.</param>
-        public void ParseAndRun(string text)
+        public void Run(string text)
         {
             // Remove garbage.
             text = text.Simplified();
+
+            // Try to convert any aliases to their contents.
+            text = ReplaceAlias(text);
 
             // Split the text using our pattern. Splits by spaces but preserves quote groups.
             List<string> args = Util.SplitByQuotes(text);
@@ -1278,6 +1369,33 @@ namespace Gungnir
                 return null;
 
             return command;
+        }
+
+        public string GetAlias(string input)
+        {
+            if (m_aliases.TryGetValue(input, out string value))
+                return value;
+
+            return null;
+        }
+
+        public string ReplaceAlias(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            string[] split = input.Split();
+
+            string alias = GetAlias(split[0]);
+
+            if (!string.IsNullOrEmpty(alias))
+            {
+                split[0] = alias;
+
+                return string.Join(" ", split);
+            }
+
+            return input;
         }
     }
 

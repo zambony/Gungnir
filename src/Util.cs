@@ -438,9 +438,19 @@ namespace Gungnir
             return (T)self.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(self);
         }
 
+        public static T GetPrivateStaticField<T>(Type type, string field)
+        {
+            return (T)type.GetField(field, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+        }
+
         public static void SetPrivateField<T>(this object self, string field, T value)
         {
             self.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).SetValue(self, value);
+        }
+
+        public static void SetPrivateStaticField<T>(Type type, string field, T value)
+        {
+            type.GetField(field, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, value);
         }
 
         public static T StaticInvokePrivate<T>(Type type, string method, params object[] args)
