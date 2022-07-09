@@ -546,6 +546,33 @@ namespace Gungnir
             }
         }
 
+        [Command("listportals", "List every portal tag.")]
+        public void ListPortals()
+        {
+            HashSet<string> tagSet = new HashSet<string>();
+
+            int portalHash = Game.instance.m_portalPrefab.name.GetStableHashCode();
+
+            var query =
+                from pair in ZDOMan.instance.GetPrivateField<Dictionary<ZDOID, ZDO>>("m_objectsByID")
+                let tag = pair.Value.GetString("tag", null)
+                where pair.Value.GetPrefab() == portalHash && !string.IsNullOrEmpty(tag) && tag != " "
+                select pair.Value;
+
+            foreach (ZDO zdo in query)
+            {
+                string tag = zdo.GetString("tag", null);
+
+                if (!tagSet.Contains(tag))
+                    tagSet.Add(tag);
+            }
+
+            Logger.Log($"Found {tagSet.Count.ToString().WithColor(Logger.GoodColor)} tag(s)...", true);
+
+            foreach (string tag in tagSet.OrderBy(tag => tag))
+                global::Console.instance.Print(tag);
+        }
+
         [Command("listprefabs", "List every prefab in the game, or search for one that contains your text.")]
         public void ListPrefabs(string prefabName = null)
         {
@@ -716,6 +743,20 @@ namespace Gungnir
             }
 
             Logger.Log($"Repaired {count.ToString().WithColor(Logger.GoodColor)} structure(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+        }
+
+        [Command("setmaxweight", "Set your maximum carry weight.")]
+        public void SetCarryWeight(float maxWeight = 300f)
+        {
+            if (maxWeight <= 0f)
+            {
+                Logger.Error("Max weight must be greater than zero.", true);
+                return;
+            }
+
+            Player.m_localPlayer.m_maxCarryWeight = maxWeight;
+
+            Logger.Log($"Set maximum carry weight to {maxWeight.ToString().WithColor(Logger.GoodColor)}.", true);
         }
 
         [Command("setskill", "Set the level of one of your skills.")]
