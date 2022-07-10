@@ -180,6 +180,12 @@ namespace Gungnir
         [Command("butcher", "Kills all living creatures within a radius (meters), excluding players.")]
         public void KillAll(float radius = 50f, bool killTamed = false)
         {
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
             List<Character> characters = new List<Character>();
             Character.GetCharactersInRange(Player.m_localPlayer.transform.position, radius, characters);
 
@@ -693,6 +699,12 @@ namespace Gungnir
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
         public void RemoveDrops(float radius = 50f)
         {
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
             ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
 
             int count = 0;
@@ -731,6 +743,12 @@ namespace Gungnir
             if (Player.m_localPlayer == null)
             {
                 Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
                 return;
             }
 
@@ -886,6 +904,97 @@ namespace Gungnir
             zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
 
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("spawntamed", "Spawn a tamed version of a creature.")]
+        public void SpawnTamed(string creature, int level = 1)
+        {
+            if (!ZNetScene.instance)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(creature))
+            {
+                Logger.Error("You must specify a name.", true);
+                return;
+            }
+
+            if (level <= 0)
+            {
+                Logger.Error("Level must be greater than 0.", true);
+                return;
+            }
+
+            GameObject prefabObject;
+
+            try
+            {
+                prefabObject = Util.GetPrefabByName(creature);
+            }
+            catch (TooManyValuesException)
+            {
+                Logger.Error($"Found more than one creature containing the text <color=white>{creature}</color>, please be more specific.", true);
+                return;
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find any creatures named <color=white>{creature}</color>.", true);
+                return;
+            }
+
+            Character character = prefabObject.GetComponent<Character>();
+
+            if (character == null)
+            {
+                Logger.Error($"{prefabObject.name.WithColor(Color.white)} is not a valid creature.", true);
+                return;
+            }
+
+            GameObject spawned = UnityEngine.Object.Instantiate(
+                prefabObject,
+                Player.m_localPlayer.transform.position + Player.m_localPlayer.transform.forward * 1.5f,
+                Quaternion.identity
+            );
+
+            if (!spawned)
+            {
+                Logger.Error("Something went wrong!", true);
+                return;
+            }
+
+            character = spawned.GetComponent<Character>();
+            character.gameObject.GetComponent<MonsterAI>().MakeTame();
+            character.SetLevel(Math.Min(level, 10));
+
+            Logger.Log($"Spawned a tame level {level.ToString().WithColor(Logger.WarningColor)} {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("tame", "Pacify all tameable creatures in a radius.")]
+        public void Tame(float radius = 10f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
+            List<Character> characters = new List<Character>();
+            Character.GetCharactersInRange(Player.m_localPlayer.transform.position, radius, characters);
+
+            int count = 0;
+
+            foreach (Character character in characters)
+            {
+                if (character.gameObject.GetComponent<Tameable>() != null)
+                {
+                    character.gameObject.GetComponent<MonsterAI>().MakeTame();
+                    ++count;
+                }
+            }
+
+            Logger.Log($"Tamed {count.ToString().WithColor(Logger.GoodColor)} creatures within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("time", "Overrides the time of day for you only (0 to 1 where 0.5 is noon). Set to a negative number to disable.")]
