@@ -108,12 +108,16 @@ namespace Gungnir
     internal class CommandHandler
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
-        private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+        private Dictionary<string, string> m_aliases = new Dictionary<string, string>();
+
         private CustomConsole m_console = null;
         private Gungnir m_plugin = null;
 
+        private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+
         internal CustomConsole Console { get => m_console; set => m_console = value; }
         internal Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
+        public Dictionary<string, string> Aliases { get => m_aliases; set => m_aliases = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
@@ -122,6 +126,35 @@ namespace Gungnir
         private static List<string> GetPrefabNames()
         {
             return ZNetScene.instance?.GetPrefabNames();
+        }
+
+        [Command("alias", "Create a shortcut or alternate name for a command, or sequence of commands.")]
+        public void Alias(string name, params string[] commandText)
+        {
+            if (name.Contains(" "))
+            {
+                Logger.Error("An alias cannot contain spaces.", true);
+                return;
+            }
+
+            if (m_actions.ContainsKey(name))
+            {
+                Logger.Error($"{name.WithColor(Color.white)} is a Gungnir command and cannot be overwritten.", true);
+                return;
+            }
+            else if (Util.GetPrivateStaticField<Dictionary<string, Terminal.ConsoleCommand>>(typeof(Terminal), "commands").ContainsKey(name))
+            {
+                Logger.Error($"{name.WithColor(Color.white)} is a built-in Valheim command and cannot be overwritten.", true);
+                return;
+            }
+
+            if (m_aliases.ContainsKey(name))
+                m_aliases.Remove(name);
+
+            string cmd = string.Join(" ", commandText);
+            m_aliases.Add(name, cmd);
+
+            Logger.Log($"Alias {name.WithColor(Logger.WarningColor)} created for {cmd.WithColor(Logger.WarningColor)}", true);
         }
 
         [Command("bind", "Bind a console command to a key. See the Unity documentation for KeyCode names.")]
@@ -147,6 +180,12 @@ namespace Gungnir
         [Command("butcher", "Kills all living creatures within a radius (meters), excluding players.")]
         public void KillAll(float radius = 50f, bool killTamed = false)
         {
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
             List<Character> characters = new List<Character>();
             Character.GetCharactersInRange(Player.m_localPlayer.transform.position, radius, characters);
 
@@ -390,6 +429,32 @@ namespace Gungnir
             }
         }
 
+        [Command("listaliases", "List all of your custom aliases, or check what a specific alias does.")]
+        public void ListAliases(string alias = null)
+        {
+            if (m_aliases.Count == 0)
+            {
+                Logger.Error($"You have no aliases currently set. Use {"/alias".WithColor(Color.white)} to add some.", true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(alias))
+            {
+                foreach (var pair in m_aliases)
+                    global::Console.instance.Print($"{pair.Key} = {pair.Value.WithColor(Logger.WarningColor)}");
+
+                return;
+            }
+
+            if (!m_aliases.TryGetValue(alias, out string cmd))
+            {
+                Logger.Error($"The alias {alias.WithColor(Color.white)} does not exist.", true);
+                return;
+            }
+
+            global::Console.instance.Print($"{alias} = {cmd.WithColor(Logger.WarningColor)}");
+        }
+
         [Command("listbinds", "List all of your custom keybinds, or check what an individual keycode is bound to.")]
         public void ListBinds(string keyCode = null)
         {
@@ -401,7 +466,7 @@ namespace Gungnir
 
             if (string.IsNullOrEmpty(keyCode))
             {
-                foreach (KeyValuePair<KeyCode, string> pair in Plugin.Binds)
+                foreach (var pair in Plugin.Binds)
                     global::Console.instance.Print($"{pair.Key} = {pair.Value.WithColor(Logger.WarningColor)}");
 
                 return;
@@ -485,6 +550,33 @@ namespace Gungnir
                 foreach (string item in foundItems)
                     global::Console.instance.Print(item);
             }
+        }
+
+        [Command("listportals", "List every portal tag.")]
+        public void ListPortals()
+        {
+            HashSet<string> tagSet = new HashSet<string>();
+
+            int portalHash = Game.instance.m_portalPrefab.name.GetStableHashCode();
+
+            var query =
+                from pair in ZDOMan.instance.GetPrivateField<Dictionary<ZDOID, ZDO>>("m_objectsByID")
+                let tag = pair.Value.GetString("tag", null)
+                where pair.Value.GetPrefab() == portalHash && !string.IsNullOrEmpty(tag) && tag != " "
+                select pair.Value;
+
+            foreach (ZDO zdo in query)
+            {
+                string tag = zdo.GetString("tag", null);
+
+                if (!tagSet.Contains(tag))
+                    tagSet.Add(tag);
+            }
+
+            Logger.Log($"Found {tagSet.Count.ToString().WithColor(Logger.GoodColor)} tag(s)...", true);
+
+            foreach (string tag in tagSet.OrderBy(tag => tag))
+                global::Console.instance.Print(tag);
         }
 
         [Command("listprefabs", "List every prefab in the game, or search for one that contains your text.")]
@@ -607,6 +699,12 @@ namespace Gungnir
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
         public void RemoveDrops(float radius = 50f)
         {
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
             ItemDrop[] items = GameObject.FindObjectsOfType<ItemDrop>();
 
             int count = 0;
@@ -648,6 +746,12 @@ namespace Gungnir
                 return;
             }
 
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
             int count = 0;
 
             foreach (WearNTear obj in WearNTear.GetAllInstaces())
@@ -657,6 +761,20 @@ namespace Gungnir
             }
 
             Logger.Log($"Repaired {count.ToString().WithColor(Logger.GoodColor)} structure(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+        }
+
+        [Command("setmaxweight", "Set your maximum carry weight.")]
+        public void SetCarryWeight(float maxWeight = 300f)
+        {
+            if (maxWeight <= 0f)
+            {
+                Logger.Error("Max weight must be greater than zero.", true);
+                return;
+            }
+
+            Player.m_localPlayer.m_maxCarryWeight = maxWeight;
+
+            Logger.Log($"Set maximum carry weight to {maxWeight.ToString().WithColor(Logger.GoodColor)}.", true);
         }
 
         [Command("setskill", "Set the level of one of your skills.")]
@@ -786,6 +904,97 @@ namespace Gungnir
             zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
 
             Logger.Log($"Spawned {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("spawntamed", "Spawn a tamed version of a creature.")]
+        public void SpawnTamed(string creature, int level = 1)
+        {
+            if (!ZNetScene.instance)
+            {
+                Logger.Error("No world loaded.", true);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(creature))
+            {
+                Logger.Error("You must specify a name.", true);
+                return;
+            }
+
+            if (level <= 0)
+            {
+                Logger.Error("Level must be greater than 0.", true);
+                return;
+            }
+
+            GameObject prefabObject;
+
+            try
+            {
+                prefabObject = Util.GetPrefabByName(creature);
+            }
+            catch (TooManyValuesException)
+            {
+                Logger.Error($"Found more than one creature containing the text <color=white>{creature}</color>, please be more specific.", true);
+                return;
+            }
+            catch (NoMatchFoundException)
+            {
+                Logger.Error($"Couldn't find any creatures named <color=white>{creature}</color>.", true);
+                return;
+            }
+
+            Character character = prefabObject.GetComponent<Character>();
+
+            if (character == null)
+            {
+                Logger.Error($"{prefabObject.name.WithColor(Color.white)} is not a valid creature.", true);
+                return;
+            }
+
+            GameObject spawned = UnityEngine.Object.Instantiate(
+                prefabObject,
+                Player.m_localPlayer.transform.position + Player.m_localPlayer.transform.forward * 1.5f,
+                Quaternion.identity
+            );
+
+            if (!spawned)
+            {
+                Logger.Error("Something went wrong!", true);
+                return;
+            }
+
+            character = spawned.GetComponent<Character>();
+            character.gameObject.GetComponent<MonsterAI>().MakeTame();
+            character.SetLevel(Math.Min(level, 10));
+
+            Logger.Log($"Spawned a tame level {level.ToString().WithColor(Logger.WarningColor)} {prefabObject.name.WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("tame", "Pacify all tameable creatures in a radius.")]
+        public void Tame(float radius = 10f)
+        {
+            if (radius <= 0f)
+            {
+                Logger.Error($"Radius must be greater than 0.", true);
+                return;
+            }
+
+            List<Character> characters = new List<Character>();
+            Character.GetCharactersInRange(Player.m_localPlayer.transform.position, radius, characters);
+
+            int count = 0;
+
+            foreach (Character character in characters)
+            {
+                if (character.gameObject.GetComponent<Tameable>() != null)
+                {
+                    character.gameObject.GetComponent<MonsterAI>().MakeTame();
+                    ++count;
+                }
+            }
+
+            Logger.Log($"Tamed {count.ToString().WithColor(Logger.GoodColor)} creatures within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
         }
 
         [Command("time", "Overrides the time of day for you only (0 to 1 where 0.5 is noon). Set to a negative number to disable.")]
@@ -1004,6 +1213,35 @@ namespace Gungnir
             Logger.Log("Woosh!", true);
         }
 
+        [Command("unalias", "Remove an alias you've created.")]
+        public void Unalias(string alias)
+        {
+            if (m_aliases.ContainsKey(alias))
+            {
+                m_aliases.Remove(alias);
+                Logger.Log($"Alias {alias.WithColor(Logger.GoodColor)} deleted.", true);
+
+                return;
+            }
+
+            Logger.Error($"No alias named {alias.WithColor(Color.white)} exists.", true);
+        }
+
+        [Command("unaliasall", "Removes all of your custom command aliases. Requires a true/1/yes as parameter to confirm you mean it.")]
+        public void UnaliasAll(bool confirm)
+        {
+            if (!confirm)
+            {
+                Logger.Error("Your aliases are safe.", true);
+                return;
+            }
+
+            m_aliases.Clear();
+            Plugin.SaveAliases();
+
+            Logger.Log("All of your aliases have been cleared.", true);
+        }
+
         [Command("unbind", "Removes a custom keybind.")]
         public void Unbind(string keyCode)
         {
@@ -1030,7 +1268,7 @@ namespace Gungnir
         {
             if (!confirm)
             {
-                Logger.Error("Your binds will continue to live...", true);
+                Logger.Error("Your binds are safe.", true);
                 return;
             }
 
@@ -1148,7 +1386,7 @@ namespace Gungnir
 
                 new Terminal.ConsoleCommand("/" + command.data.keyword, helpText, delegate (Terminal.ConsoleEventArgs args)
                 {
-                    ParseAndRun(args.FullLine);
+                    Run(args.FullLine);
                 }, optionsFetcher: fetcher);
                 Logger.Log($"Registered command {command.data.keyword}");
             }
@@ -1162,10 +1400,13 @@ namespace Gungnir
         /// parameters, then run the command.
         /// </summary>
         /// <param name="text">Command string to evaluate.</param>
-        public void ParseAndRun(string text)
+        public void Run(string text)
         {
             // Remove garbage.
             text = text.Simplified();
+
+            // Try to convert any aliases to their contents.
+            text = ReplaceAlias(text);
 
             // Split the text using our pattern. Splits by spaces but preserves quote groups.
             List<string> args = Util.SplitByQuotes(text);
@@ -1278,6 +1519,33 @@ namespace Gungnir
                 return null;
 
             return command;
+        }
+
+        public string GetAlias(string input)
+        {
+            if (m_aliases.TryGetValue(input, out string value))
+                return value;
+
+            return null;
+        }
+
+        public string ReplaceAlias(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            string[] split = input.Split();
+
+            string alias = GetAlias(split[0]);
+
+            if (!string.IsNullOrEmpty(alias))
+            {
+                split[0] = alias;
+
+                return string.Join(" ", split);
+            }
+
+            return input;
         }
     }
 

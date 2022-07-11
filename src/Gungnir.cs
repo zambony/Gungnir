@@ -43,9 +43,24 @@ namespace Gungnir
                 builder.AppendLine($"{pair.Key}={pair.Value}");
 
             string output = builder.ToString();
-            Debug.Log(output);
 
             string path = Path.Combine(Paths.ConfigPath, ModGUID + "_binds.txt");
+            File.WriteAllText(path, output);
+        }
+
+        /// <summary>
+        /// Save the user's custom command aliases.
+        /// </summary>
+        public void SaveAliases()
+        {
+            StringBuilder builder = new StringBuilder();
+
+            foreach (KeyValuePair<string, string> pair in m_handler.Aliases)
+                builder.AppendLine($"{pair.Key}={pair.Value}");
+
+            string output = builder.ToString();
+
+            string path = Path.Combine(Paths.ConfigPath, ModGUID + "_aliases.txt");
             File.WriteAllText(path, output);
         }
 
@@ -73,6 +88,30 @@ namespace Gungnir
                     continue;
 
                 m_binds.Add(key, info[1].Trim());
+            }
+        }
+
+        /// <summary>
+        /// Load the user's custom command aliases.
+        /// </summary>
+        public void LoadAliases()
+        {
+            string path = Path.Combine(Paths.ConfigPath, ModGUID + "_aliases.txt");
+
+            if (!File.Exists(path))
+                return;
+
+            string[] lines = File.ReadAllLines(path);
+
+            foreach (string line in lines)
+            {
+                // Only split by the first instance of equals.
+                string[] info = line.Trim().Split(new char[] { '=' }, 2);
+
+                if (info.Length != 2)
+                    continue;
+
+                m_handler.Aliases.Add(info[0], info[1].Trim());
             }
         }
 

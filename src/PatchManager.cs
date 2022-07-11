@@ -139,7 +139,7 @@ namespace Gungnir.Patch
         [HarmonyPatch(typeof(Terminal), "TryRunCommand")]
         public static class CommandChainingPatch
         {
-            private static bool Prefix(string text)
+            private static bool Prefix(ref string text)
             {
                 List<string> commands = text.SplitEscaped(';');
 
@@ -151,6 +151,8 @@ namespace Gungnir.Patch
 
                     return false;
                 }
+
+                text = Plugin.Handler.ReplaceAlias(text);
 
                 return true;
             }
