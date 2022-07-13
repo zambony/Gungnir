@@ -141,6 +141,8 @@ namespace Gungnir.Patch
         {
             private static bool Prefix(ref string text)
             {
+                text = Plugin.Handler.ReplaceAlias(text);
+
                 List<string> commands = text.SplitEscaped(';');
 
                 // Avoid recursion. Don't want to call this prefix infinitely...
@@ -151,8 +153,6 @@ namespace Gungnir.Patch
 
                     return false;
                 }
-
-                text = Plugin.Handler.ReplaceAlias(text);
 
                 return true;
             }
