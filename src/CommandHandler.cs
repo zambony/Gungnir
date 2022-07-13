@@ -153,6 +153,7 @@ namespace Gungnir
 
             string cmd = string.Join(" ", commandText);
             m_aliases.Add(name, cmd);
+            Plugin.SaveAliases();
 
             Logger.Log($"Alias {name.WithColor(Logger.WarningColor)} created for {cmd.WithColor(Logger.WarningColor)}", true);
         }
