@@ -1,11 +1,11 @@
-﻿using BepInEx;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using BepInEx;
+using Gungnir.Patch;
 using HarmonyLib;
 using UnityEngine;
-using System.Collections.Generic;
-using Gungnir.Patch;
-using System;
-using System.Text;
-using System.IO;
 
 namespace Gungnir
 {
@@ -16,7 +16,7 @@ namespace Gungnir
         public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
-        public const string ModVersion = "1.5.2";
+        public const string ModVersion = "1.5.3";
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
@@ -29,8 +29,8 @@ namespace Gungnir
         public bool NoStamina           = false;
         public bool NoSlide             = false;
 
-        internal Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
-        internal CommandHandler Handler { get => m_handler; set => m_handler = value; }
+        internal Dictionary<KeyCode, string> Binds { get; set; }
+        internal CommandHandler Handler { get; set; }
 
         /// <summary>
         /// Save all of the user's console keybinds to a file in the BepInEx config folder.
@@ -120,6 +120,7 @@ namespace Gungnir
             PatchManager.Plugin = this;
             ConfigManager.Init(Config);
             LoadBinds();
+            LoadAliases();
             m_harmony.PatchAll(typeof(PatchManager).Assembly);
         }
 
