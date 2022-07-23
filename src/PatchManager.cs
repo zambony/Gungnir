@@ -1,7 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace Gungnir.Patch
 {

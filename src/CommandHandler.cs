@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Reflection;
+using System.Text;
 using UnityEngine;
 
 namespace Gungnir
@@ -108,16 +107,16 @@ namespace Gungnir
     internal class CommandHandler
     {
         private Dictionary<string, CommandMeta> m_actions = new Dictionary<string, CommandMeta>();
-        private Dictionary<string, string> m_aliases = new Dictionary<string, string>();
+        private Dictionary<string, string>      m_aliases = new Dictionary<string, string>();
 
         private CustomConsole m_console = null;
-        private Gungnir m_plugin = null;
+        private Gungnir       m_plugin  = null;
 
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
-        internal CustomConsole Console { get => m_console; set => m_console = value; }
-        internal Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
-        public Dictionary<string, string> Aliases { get => m_aliases; set => m_aliases = value; }
+        internal CustomConsole Console { get; set; }
+        internal Gungnir Plugin { get; set; }
+        public Dictionary<string, string> Aliases { get; set; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
