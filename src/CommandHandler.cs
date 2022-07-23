@@ -114,9 +114,9 @@ namespace Gungnir
 
         private const BindingFlags s_bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
 
-        internal CustomConsole Console { get; set; }
-        internal Gungnir Plugin { get; set; }
-        public Dictionary<string, string> Aliases { get; set; }
+        internal CustomConsole Console { get => m_console; set => m_console = value; }
+        internal Gungnir Plugin { get => m_plugin; set => m_plugin = value; }
+        public Dictionary<string, string> Aliases { get => m_aliases; set => m_aliases = value; }
 
         /// <summary>
         /// Helper function for the give command's autocomplete feature.
