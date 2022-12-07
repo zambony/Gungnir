@@ -338,6 +338,8 @@ namespace Gungnir
             }
 
             Player.m_localPlayer.transform.position = player.transform.position - (player.transform.forward * 1.5f) + (Vector3.up * 2f);
+
+            Logger.Log($"Teleporting to {player.GetPlayerName().WithColor(Logger.GoodColor)}...");
         }
 
         [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
@@ -803,7 +805,7 @@ namespace Gungnir
             level = Mathf.Clamp(level, 0, 100);
 
             Player.m_localPlayer.GetSkills().CheatResetSkill(targetSkill);
-            Player.m_localPlayer.GetSkills().CheatRaiseSkill(targetSkill, level);
+            Player.m_localPlayer.GetSkills().CheatRaiseSkill(targetSkill, level, false);
 
             Logger.Log($"Set {targetSkill.WithColor(Logger.GoodColor)} to level {level.ToString().WithColor(Logger.GoodColor)}.", true);
         }
@@ -1503,7 +1505,7 @@ namespace Gungnir
             {
                 command.method.Invoke(this, convertedArgs.ToArray());
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Logger.Error($"Something happened while running {command.data.keyword.WithColor(Color.white)}, check the BepInEx console for more details.", true);
                 throw;

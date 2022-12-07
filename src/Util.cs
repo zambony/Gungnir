@@ -231,7 +231,7 @@ namespace Gungnir
         /// <returns>The prefab.</returns>
         public static GameObject GetHiddenPrefab(string name)
         {
-            if (s_cachedPrefabs.TryGetValue(name.ToLower(), out GameObject ret))
+            if (s_cachedPrefabs.TryGetValue(name.ToLower(), out GameObject ret) && ret != null)
                 return ret;
 
             var objects = Resources.FindObjectsOfTypeAll<Transform>()
@@ -242,6 +242,9 @@ namespace Gungnir
             {
                 if (prefab.name.Equals(name, StringComparison.OrdinalIgnoreCase))
                 {
+                    if (s_cachedPrefabs.ContainsKey(name.ToLower()))
+                        s_cachedPrefabs.Remove(name.ToLower());
+
                     s_cachedPrefabs.Add(name.ToLower(), prefab);
                     return prefab;
                 }
