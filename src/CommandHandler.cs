@@ -211,16 +211,20 @@ namespace Gungnir
         }
 
         [Command("creative", "Toggles creative mode, which removes the need for resources.")]
-        public void ToggleNoCost()
+        public void ToggleNoCost(bool? enabled = null)
         {
-            bool enabled = Player.m_localPlayer.ToggleNoPlacementCost();
+            enabled = enabled ?? !Player.m_localPlayer.GetPrivateField<bool>("m_noPlacementCost");
 
-            if (!enabled && !Player.m_localPlayer.IsDebugFlying())
+            Player.m_localPlayer.SetPrivateField("m_noPlacementCost", enabled);
+
+            if (!(bool)enabled && !Player.m_localPlayer.IsDebugFlying())
                 Player.m_debugMode = false;
             else
                 Player.m_debugMode = true;
 
-            Logger.Log($"Creative mode: {(enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+            Player.m_localPlayer.InvokePrivate<object>("UpdateAvailablePiecesList");
+
+            Logger.Log($"Creative mode: {((bool)enabled ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("echo", "Shout into the void.")]
@@ -286,12 +290,12 @@ namespace Gungnir
             }
             catch (TooManyValuesException)
             {
-                Logger.Error($"Found more than one prefab containing the text <color=white>{itemName}</color>, please be more specific.", true);
+                Logger.Error($"Found more than one item containing the text <color=white>{itemName}</color>, please be more specific.", true);
                 return;
             }
             catch (NoMatchFoundException)
             {
-                Logger.Error($"Couldn't find any prefabs named <color=white>{itemName}</color>.", true);
+                Logger.Error($"Couldn't find any items named <color=white>{itemName}</color>.", true);
                 return;
             }
 
@@ -343,16 +347,20 @@ namespace Gungnir
         }
 
         [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
-        public void ToggleGhostMode()
+        public void ToggleGhostMode(bool? enabled = null)
         {
-            Player.m_localPlayer.SetGhostMode(!Player.m_localPlayer.InGhostMode());
+            enabled = enabled ?? !Player.m_localPlayer.InGhostMode();
+
+            Player.m_localPlayer.SetGhostMode((bool)enabled);
             Logger.Log($"Ghost mode: {(Player.m_localPlayer.InGhostMode() ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("god", "Toggles invincibility.")]
-        public void ToggleGodmode()
+        public void ToggleGodmode(bool? enabled = null)
         {
-            Player.m_localPlayer.SetGodMode(!Player.m_localPlayer.InGodMode());
+            enabled = enabled ?? !Player.m_localPlayer.InGodMode();
+
+            Player.m_localPlayer.SetGodMode((bool)enabled);
             Logger.Log($"God mode: {(Player.m_localPlayer.InGodMode() ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
@@ -635,10 +643,38 @@ namespace Gungnir
                 global::Console.instance.Print(skillType.ToString());
         }
 
-        [Command("nostam", "Toggles infinite stamina.")]
-        public void ToggleStamina()
+        [Command("nomana", "Toggles infintie eitr (mana).")]
+        public void ToggleMana(bool? enabled = null)
         {
-            if (!Plugin.NoStamina)
+            enabled = enabled ?? !Plugin.NoMana;
+
+            if ((bool)enabled)
+            {
+                Player.m_localPlayer.m_eitrRegenDelay = 0.0f;
+                Player.m_localPlayer.m_eiterRegen = 1000f;
+                Player.m_localPlayer.SetMaxEitr(1000f, true);
+                Plugin.NoMana = true;
+            }
+            else
+            {
+                Player.m_localPlayer.m_eitrRegenDelay = 1f;
+                Player.m_localPlayer.m_eiterRegen = 5f;
+                Player.m_localPlayer.SetMaxEitr(100f, true);
+                Plugin.NoMana = false;
+            }
+
+            Logger.Log(
+                $"Infinite mana: {(Plugin.NoMana ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}",
+                true
+            );
+        }
+
+        [Command("nostam", "Toggles infinite stamina.")]
+        public void ToggleStamina(bool? enabled = null)
+        {
+            enabled = enabled ?? !Plugin.NoStamina;
+
+            if ((bool)enabled)
             {
                 Player.m_localPlayer.m_staminaRegenDelay = 0.05f;
                 Player.m_localPlayer.m_staminaRegen = 999f;
@@ -662,25 +698,30 @@ namespace Gungnir
         }
 
         [Command("nores", "Toggle building restrictions. Allows you to place objects even when the preview is red.")]
-        public void ToggleBuildAnywhere()
+        public void ToggleBuildAnywhere(bool? enabled = null)
         {
-            Plugin.BuildAnywhere = !Plugin.BuildAnywhere;
+            enabled = enabled ?? !Plugin.BuildAnywhere;
+
+            Plugin.BuildAnywhere = (bool)enabled;
             Logger.Log($"No build restrictions: {(Plugin.BuildAnywhere ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("noslide", "Toggle the ability to walk up steep angles without sliding.")]
-        public void ToggleNoSlide()
+        public void ToggleNoSlide(bool? enabled = null)
         {
-            Plugin.NoSlide = !Plugin.NoSlide;
+            enabled = enabled ?? !Plugin.NoSlide;
+
+            Plugin.NoSlide = (bool)enabled;
             Logger.Log($"No slide: {(Plugin.NoSlide ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("nosup", "Toggle the need for structural support.")]
-        public void ToggleNoSupport()
+        public void ToggleNoSupport(bool? enabled = null)
         {
-            Plugin.NoStructuralSupport = !Plugin.NoStructuralSupport;
-            Logger.Log($"No structural support: {(Plugin.NoStructuralSupport ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
+            enabled = enabled ?? !Plugin.NoSlide;
 
+            Plugin.NoStructuralSupport = (bool)enabled;
+            Logger.Log($"No structural support: {(Plugin.NoStructuralSupport ? "ON".WithColor(Logger.GoodColor) : "OFF".WithColor(Logger.ErrorColor))}", true);
         }
 
         [Command("pos", "Print your current position as XZY coordinates. (XZY is used for tp command.)")]
