@@ -135,6 +135,63 @@ namespace Gungnir.Patch
             }
         }
 
+        [HarmonyPatch(typeof(Player), "UseEitr")]
+        public static class UseEitrPatch
+        {
+            private static bool Prefix(ref ZNetView ___m_nview, float ___m_maxEitr)
+            {
+                if (Plugin.NoMana && ___m_nview.IsValid() && ___m_nview.IsOwner())
+                {
+                    ___m_nview.GetZDO().Set("eitr", 1000f);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), "HaveEitr")]
+        public static class HaveEitrPatch
+        {
+            private static bool Prefix(ref bool __result, ref ZNetView ___m_nview)
+            {
+                if (Plugin.NoMana && ___m_nview.IsValid() && ___m_nview.IsOwner())
+                {
+                    __result = true;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), "GetMaxEitr")]
+        public static class GetMaxEitrPatch
+        {
+            private static bool Prefix(ref float __result, ref ZNetView ___m_nview)
+            {
+                if (Plugin.NoMana && ___m_nview.IsValid() && ___m_nview.IsOwner())
+                {
+                    __result = 1000f;
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        
+        [HarmonyPatch(typeof(Player), "UpdateStats")]
+        public static class UpdateStatsEitrPatch
+        {
+            private static void Postfix(ref ZNetView ___m_nview, ref float ___m_eitr)
+            {
+                if (Plugin.NoMana && ___m_nview.IsValid() && ___m_nview.IsOwner())
+                {
+                    ___m_eitr = 1000f;
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(Terminal), "TryRunCommand")]
         public static class CommandChainingPatch
         {

@@ -16,7 +16,7 @@ namespace Gungnir
         public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
-        public const string ModVersion = "1.5.5";
+        public const string ModVersion = "1.6.0";
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
@@ -28,6 +28,7 @@ namespace Gungnir
         public bool NoStructuralSupport = false;
         public bool NoStamina           = false;
         public bool NoSlide             = false;
+        public bool NoMana              = false;
 
         internal Dictionary<KeyCode, string> Binds { get => m_binds; set => m_binds = value; }
         internal CommandHandler Handler { get => m_handler; set => m_handler = value; }
