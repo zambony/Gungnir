@@ -16,7 +16,7 @@ namespace Gungnir
         public const string ModName    = "Gungnir";
         public const string ModOrg     = "zamboni";
         public const string ModGUID    = ModOrg + "." + ModName;
-        public const string ModVersion = "1.6.0";
+        public const string ModVersion = "1.7.0";
 
         private readonly Harmony m_harmony = new Harmony(ModGUID);
         private CommandHandler   m_handler = new CommandHandler();
