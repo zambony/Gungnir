@@ -192,7 +192,7 @@ namespace Gungnir
         {
             try
             {
-                return (from player in Player.GetAllPlayers() where player.GetPlayerID() == id select player).First();
+                return Player.GetAllPlayers().Where(p => p.GetPlayerID() == id).First();
             }
             catch (Exception)
             {
@@ -290,7 +290,8 @@ namespace Gungnir
                 {
                     if (value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                         value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-                        value.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                        value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                        value.Equals("on", StringComparison.OrdinalIgnoreCase))
                         return true;
                     else
                         return false;
@@ -457,12 +458,30 @@ namespace Gungnir
 
         public static T StaticInvokePrivate<T>(Type type, string method, params object[] args)
         {
-            return (T)type.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, args);
+            Type[] typeArr = new Type[args.Length];
+            args.Select(i => i.GetType()).ToArray().CopyTo(typeArr, 0);
+
+            return (T)type.GetMethod(
+                method,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                Type.DefaultBinder,
+                typeArr,
+                null
+            ).Invoke(null, args);
         }
 
         public static T InvokePrivate<T>(this object self, string method, params object[] args)
         {
-            return (T)self.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static).Invoke(self, args);
+            Type[] typeArr = new Type[args.Length];
+            args.Select(i => i.GetType()).ToArray().CopyTo(typeArr, 0);
+
+            return (T)self.GetType().GetMethod(
+                method,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static,
+                Type.DefaultBinder,
+                typeArr,
+                null
+            ).Invoke(self, args);
         }
 
         public static float Distance2D(float x1, float y1, float x2, float y2)

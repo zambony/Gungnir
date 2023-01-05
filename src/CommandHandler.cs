@@ -180,6 +180,12 @@ namespace Gungnir
         [Command("butcher", "Kills all living creatures within a radius (meters), excluding players.")]
         public void KillAll(float radius = 50f, bool killTamed = false)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error($"Radius must be greater than 0.", true);
@@ -233,9 +239,39 @@ namespace Gungnir
             global::Console.instance.Print(string.Join(" ", values));
         }
 
+        [Command("explore", "Reveals the map around you within a certain radius.")]
+        public void Explore(float radius = 200f)
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
+            if (radius <= 0f)
+            {
+                Logger.Error("Radius must be greater than 0.");
+                return;
+            }
+
+            Minimap.instance.InvokePrivate<object>("Explore", Player.m_localPlayer.transform.position, radius);
+
+            Logger.Log()
+                .write("Revealed the map within")
+                .param(radius)
+                .write("meter(s).")
+                .commit();
+        }
+
         [Command("fly", "Toggles the ability to fly. Can also disable collisions with the second argument.")]
         public void ToggleFly(bool noCollision = false)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             bool enabled = Player.m_localPlayer.ToggleDebugFly();
 
             if (enabled)
@@ -349,6 +385,12 @@ namespace Gungnir
         [Command("ghost", "Toggles ghost mode. Prevents hostile creatures from detecting you.")]
         public void ToggleGhostMode(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Player.m_localPlayer.InGhostMode();
 
             Player.m_localPlayer.SetGhostMode((bool)enabled);
@@ -358,6 +400,12 @@ namespace Gungnir
         [Command("god", "Toggles invincibility.")]
         public void ToggleGodmode(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Player.m_localPlayer.InGodMode();
 
             Player.m_localPlayer.SetGodMode((bool)enabled);
@@ -367,6 +415,12 @@ namespace Gungnir
         [Command("heal", "Heal all of your wounds.")]
         public void Heal()
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             Player.m_localPlayer.Heal(Player.m_localPlayer.GetMaxHealth(), true);
             Logger.Log("All wounds cured.", true);
         }
@@ -565,6 +619,12 @@ namespace Gungnir
         [Command("listportals", "List every portal tag.")]
         public void ListPortals()
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             HashSet<string> tagSet = new HashSet<string>();
 
             int portalHash = Game.instance.m_portalPrefab.name.GetStableHashCode();
@@ -643,9 +703,15 @@ namespace Gungnir
                 global::Console.instance.Print(skillType.ToString());
         }
 
-        [Command("nomana", "Toggles infintie eitr (mana).")]
+        [Command("nomana", "Toggles infinite eitr (mana).")]
         public void ToggleMana(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Plugin.NoMana;
 
             if ((bool)enabled)
@@ -672,6 +738,12 @@ namespace Gungnir
         [Command("nostam", "Toggles infinite stamina.")]
         public void ToggleStamina(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Plugin.NoStamina;
 
             if ((bool)enabled)
@@ -700,6 +772,12 @@ namespace Gungnir
         [Command("nores", "Toggle building restrictions. Allows you to place objects even when the preview is red.")]
         public void ToggleBuildAnywhere(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Plugin.BuildAnywhere;
 
             Plugin.BuildAnywhere = (bool)enabled;
@@ -709,6 +787,12 @@ namespace Gungnir
         [Command("noslide", "Toggle the ability to walk up steep angles without sliding.")]
         public void ToggleNoSlide(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Plugin.NoSlide;
 
             Plugin.NoSlide = (bool)enabled;
@@ -718,6 +802,12 @@ namespace Gungnir
         [Command("nosup", "Toggle the need for structural support.")]
         public void ToggleNoSupport(bool? enabled = null)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             enabled = enabled ?? !Plugin.NoSlide;
 
             Plugin.NoStructuralSupport = (bool)enabled;
@@ -727,6 +817,12 @@ namespace Gungnir
         [Command("pos", "Print your current position as XZY coordinates. (XZY is used for tp command.)")]
         public void Pos()
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             Vector3 pos = Player.m_localPlayer.transform.position;
             string fmt = $"{Math.Round(pos.x, 3)} {Math.Round(pos.z, 3)} {Math.Round(pos.y, 3)}".WithColor(Logger.GoodColor);
             Logger.Log($"Your current position is {fmt}", true);
@@ -735,13 +831,38 @@ namespace Gungnir
         [Command("puke", "Clears all food buffs and makes room for you to eat something else.")]
         public void Puke()
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             Player.m_localPlayer.ClearFood();
             Logger.Log("Food buffs cleared.", true);
+        }
+
+        [Command("refreshability", "Refreshes the cooldown on your special ability.")]
+        public void RefreshAbility()
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
+            Player.m_localPlayer.m_guardianPowerCooldown = 0f;
+            Logger.Log("Guardian power cooldown refreshed.");
         }
 
         [Command("removedrops", "Clears all item drops in a radius (meters).")]
         public void RemoveDrops(float radius = 50f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error($"Radius must be greater than 0.", true);
@@ -769,6 +890,12 @@ namespace Gungnir
         [Command("repair", "Repairs every item in your inventory.")]
         public void Repair()
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>();
             Player.m_localPlayer.GetInventory().GetWornItems(items);
 
@@ -780,8 +907,8 @@ namespace Gungnir
             Logger.Log("All your items have been repaired.", true);
         }
 
-        [Command("repairbuilds", "Repairs all nearby structures within a radius (meters).")]
-        public void RepairBuildings(float radius = 50f)
+        [Command("repairbuilds", "Repairs all nearby structures within a radius. Optionally, you can specify a health value to \"overheal\".")]
+        public void RepairBuildings(float radius = 50f, float health = 0f)
         {
             if (Player.m_localPlayer == null)
             {
@@ -791,7 +918,13 @@ namespace Gungnir
 
             if (radius <= 0f)
             {
-                Logger.Error($"Radius must be greater than 0.", true);
+                Logger.Error("Radius must be greater than 0.", true);
+                return;
+            }
+
+            if (health < 0f)
+            {
+                Logger.Error("Health cannot be negative.", true);
                 return;
             }
 
@@ -799,19 +932,60 @@ namespace Gungnir
 
             foreach (WearNTear obj in WearNTear.GetAllInstaces())
             {
-                if (obj.Repair() && Vector3.Distance(obj.gameObject.transform.position, Player.m_localPlayer.transform.position) <= radius)
-                    ++count;
+                if (Vector3.Distance(obj.gameObject.transform.position, Player.m_localPlayer.transform.position) <= radius)
+                {
+                    var zdo = obj.gameObject.GetComponent<ZNetView>().GetZDO();
+                    var currentHealth = zdo.GetFloat("health", 0f);
+
+                    // If the object is less than max health, and the player said 0 hp (full repair)
+                    // OR if the current health of the object is not equal to what they set,
+                    // modify health. This helps give a nice accurate total of the number of objects modified.
+                    if (health == 0f && obj.Repair())
+                    {
+                        ++count;
+                    }
+                    else if (health != 0f && currentHealth != health)
+                    {
+                        zdo.Set("health", health);
+                        ZDOMan.instance.ForceSendZDO(zdo.m_uid);
+                        ++count;
+                    }
+                }
             }
 
-            Logger.Log($"Repaired {count.ToString().WithColor(Logger.GoodColor)} structure(s) within {radius.ToString().WithColor(Logger.GoodColor)} meters.", true);
+            if (health == 0f)
+                Logger.Log()
+                    .write("Repaired")
+                    .param(count)
+                    .write("structure(s) within")
+                    .param(radius)
+                    .write("meter(s).")
+                    .commit();
+            else
+                Logger.Log()
+                    .write("Set the health of")
+                    .param(count)
+                    .write("structure(s) within")
+                    .param(radius)
+                    .write("meter(s) to")
+                    .noSpace()
+                    .param(health)
+                    .write(".")
+                    .commit();
         }
 
         [Command("setmaxweight", "Set your maximum carry weight.")]
         public void SetCarryWeight(float maxWeight = 300f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (maxWeight <= 0f)
             {
-                Logger.Error("Max weight must be greater than zero.", true);
+                Logger.Error("Max weight must be greater than 0.", true);
                 return;
             }
 
@@ -823,6 +997,12 @@ namespace Gungnir
         [Command("setskill", "Set the level of one of your skills.")]
         public void SetSkill(string skillName, int level)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             string targetSkill;
 
             try
@@ -1017,6 +1197,12 @@ namespace Gungnir
         [Command("tame", "Pacify all tameable creatures in a radius.")]
         public void Tame(float radius = 10f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error($"Radius must be greater than 0.", true);
@@ -1074,6 +1260,12 @@ namespace Gungnir
         [Command("tlevel", "Level the terrain in a radius.")]
         public void TerrainLevel(float radius = 10f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error("Radius must be greater than 0.", true);
@@ -1092,6 +1284,12 @@ namespace Gungnir
         [Command("tlower", "Lower the terrain in a radius by some amount. Strength values closer to 0 make the terrain edges steep, while values further from 0 make them smoother.")]
         public void TerrainLower(float radius = 10f, float depth = 1f, float strength = 0.01f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error("Radius must be greater than 0.", true);
@@ -1122,6 +1320,12 @@ namespace Gungnir
         [Command("tpaint", "Paint terrain in a radius. Available paint types are: dirt, paved, cultivate, and reset.")]
         public void TerrainPaint(float radius = 5f, string paintType = "reset")
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error("Radius must be greater than 0.", true);
@@ -1146,6 +1350,12 @@ namespace Gungnir
         [Command("traise", "Raise the terrain in a radius by some amount. Strength values closer to 0 make the terrain edges steep, while values further from 0 make them smoother.")]
         public void TerrainRaise(float radius = 10f, float height = 1f, float strength = 0.01f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error("Radius must be greater than 0.", true);
@@ -1176,6 +1386,12 @@ namespace Gungnir
         [Command("treset", "Reset all terrain modifications in a radius.")]
         public void TerrainReset(float radius = 10f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error("Radius must be greater than 0.", true);
@@ -1214,6 +1430,12 @@ namespace Gungnir
         [Command("tsmooth", "Smooth terrain in a radius with some strength. Higher strengths mean more aggressive smoothing.")]
         public void TerrainSmooth(float radius = 10f, float strength = 0.5f)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (radius <= 0f)
             {
                 Logger.Error("Radius must be greater than 0.", true);
@@ -1324,6 +1546,12 @@ namespace Gungnir
         [Command("weather", "Overrides the weather for you only. Use -1 to clear the override.")]
         public void SetWeather(string weatherType)
         {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
             if (string.IsNullOrEmpty(weatherType))
             {
                 Logger.Error("You must specify a weather type.", true);
@@ -1362,6 +1590,94 @@ namespace Gungnir
 
             EnvMan.instance.m_debugEnv = targetWeather;
             Logger.Log($"Set weather type to {targetWeather.WithColor(Logger.GoodColor)}.", true);
+        }
+
+        [Command("wind", "Change the direction of the wind. Accepts cardinal directions (north/n, west/w...), or a number from 0-360. Set to -1 to reset.")]
+        public void SetWind(string direction, float intensity = 0.5f)
+        {
+            if (Player.m_localPlayer == null)
+            {
+                Logger.Error("No world loaded.");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(direction))
+            {
+                Logger.Error("You must specify a wind direction, or -1 to turn off the override.", true);
+                return;
+            }
+
+            // Game doesn't allow negative intensity, or anything above 1.
+            intensity = Mathf.Clamp01(intensity);
+
+            if (!float.TryParse(direction, out float finalDir))
+            {
+                if (direction.Equals("north", StringComparison.OrdinalIgnoreCase) || direction.Equals("n", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 0f;
+                else if (direction.Equals("northeast", StringComparison.OrdinalIgnoreCase) || direction.Equals("ne", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 45f;
+                else if (direction.Equals("east", StringComparison.OrdinalIgnoreCase) || direction.Equals("e", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 90f;
+                else if (direction.Equals("southeast", StringComparison.OrdinalIgnoreCase) || direction.Equals("se", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 135f;
+                else if (direction.Equals("south", StringComparison.OrdinalIgnoreCase) || direction.Equals("s", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 180f;
+                else if (direction.Equals("southwest", StringComparison.OrdinalIgnoreCase) || direction.Equals("sw", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 225f;
+                else if (direction.Equals("west", StringComparison.OrdinalIgnoreCase) || direction.Equals("w", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 270f;
+                else if (direction.Equals("northwest", StringComparison.OrdinalIgnoreCase) || direction.Equals("nw", StringComparison.OrdinalIgnoreCase))
+                    finalDir = 315f;
+            }
+
+            // Any negative number will disable the override.
+            if (finalDir < 0f)
+            {
+                EnvMan.instance.m_debugWind = false;
+
+                Logger.Log("Wind re-synchronized with the game.", true);
+
+                return;
+            }
+            else
+            {
+                EnvMan.instance.m_debugWind = true;
+            }
+
+            finalDir = Mathf.Clamp(finalDir, 0f, 360f);
+
+            EnvMan.instance.m_debugWindAngle = finalDir;
+            EnvMan.instance.m_debugWindIntensity = intensity;
+
+            // Nice lil lookup table for cardinal directions.
+            string[] dirNames = new string[] {
+                "North",
+                "North East",
+                "East",
+                "South East",
+                "South",
+                "South West",
+                "West",
+                "North West",
+                "North" // Wrap around value for 360.
+            };
+
+            // Find the name of whatever direction is closest to their input.
+            string finalDirName = dirNames[Mathf.RoundToInt(finalDir / 45f)];
+
+            Logger.Log()
+                .write("The wind is now blowing towards")
+                .param(finalDirName)
+                .noSpace()
+                .write("(")
+                .param(finalDir)
+                .write("),")
+                .space()
+                .write("with an intensity of")
+                .noSpace()
+                .param(intensity)
+                .write(".")
+                .commit();
         }
 
         // Please do not edit below this line unless you really need to.
@@ -1406,7 +1722,7 @@ namespace Gungnir
                     MakeAutoCompleteDelegate(attribute.autoCompleteTarget)
                 );
 
-            Logger.Log($"Registering {query.Count()} commands...");
+            Logger.Log($"Registering {query.Count()} commands...", false);
 
             // Iterate over commands in alphabetical order, so they're sorted nicely by the default help command.
             foreach (CommandMeta command in query.OrderBy(m => m.data.keyword))
@@ -1434,7 +1750,7 @@ namespace Gungnir
                 Logger.Log($"Registered command {command.data.keyword}");
             }
 
-            Logger.Log("Finished registering commands!");
+            Logger.Log("Finished registering commands!", false);
         }
 
         /// <summary>
@@ -1506,17 +1822,17 @@ namespace Gungnir
                     }
                     catch (TooManyValuesException)
                     {
-                        Logger.Error($"Found more than one {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
+                        Logger.Error($"Found more than one {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.");
                     }
                     catch (NoMatchFoundException)
                     {
-                        Logger.Error($"Couldn't find a {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.", true);
+                        Logger.Error($"Couldn't find a {Util.GetSimpleTypeName(argType)} with the text <color=white>{arg}</color>.");
                     }
 
                     // Couldn't convert, oh well!
                     if (converted == null)
                     {
-                        Logger.Error($"Error while converting arguments for command <color=white>{commandName}</color>.", true);
+                        Logger.Error($"Error while converting arguments for command <color=white>{commandName}</color>.");
                         return;
                     }
 
@@ -1540,7 +1856,7 @@ namespace Gungnir
                 }
             }
 
-            Logger.Log("Running command " + command.data.keyword);
+            Logger.Log("Running command " + command.data.keyword, false);
             // Invoke the method, which will expand all the arguments automagically.
             try
             {
@@ -1548,7 +1864,7 @@ namespace Gungnir
             }
             catch (Exception)
             {
-                Logger.Error($"Something happened while running {command.data.keyword.WithColor(Color.white)}, check the BepInEx console for more details.", true);
+                Logger.Error($"Something happened while running {command.data.keyword.WithColor(Color.white)}, check the BepInEx console for more details.");
                 throw;
             }
         }
@@ -1731,7 +2047,6 @@ namespace Gungnir
                 if (!modified)
                     continue;
 
-                compiler.SetPrivateField("m_width", width);
                 compiler.SetPrivateField("m_levelDelta", levelDelta);
                 compiler.SetPrivateField("m_smoothDelta", smoothDelta);
                 compiler.SetPrivateField("m_modifiedHeight", modifiedHeight);
