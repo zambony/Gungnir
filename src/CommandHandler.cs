@@ -2055,6 +2055,10 @@ namespace Gungnir
 
                 compiler.InvokePrivate<object>("Save");
                 heightmap.Poke(true);
+
+                // Push new terrain data to all clients.
+                var zdo = compiler.GetComponent<ZNetView>().GetZDO();
+                ZDOMan.instance.ForceSendZDO(zdo.m_uid);
             }
 
             if (ClutterSystem.instance != null && resetGrass)

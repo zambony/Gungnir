@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -136,7 +137,8 @@ namespace Gungnir
                     background.color = s_backgroundColor;
                 }
 
-                Console.instance.m_output.font = font;
+                var textMeshProFont = TMP_FontAsset.CreateFontAsset(font);
+                Console.instance.m_output.font = textMeshProFont;
                 Console.instance.m_output.fontSize = font.fontSize;
                 Console.instance.m_output.color = Color.white;
                 Console.instance.m_input.textComponent.font = font;
@@ -334,9 +336,16 @@ namespace Gungnir
                 float height = m_consoleStyle.CalcHeight(content, contentSize.x);
                 const float margin = 10f;
 
-                GUITools.DrawRect(new Rect(m_windowRect.x - margin, m_background.rectTransform.rect.height + 30f, contentSize.x + (margin * 2), height + (margin * 2)), s_backgroundColor);
+                // Retrieve the absolute bounds of the image component since Unity SUCKS.
+                var corners = new Vector3[4];
+                m_background.rectTransform.GetWorldCorners(corners);
+                var bgRect = new Rect(corners[1].x, Screen.height - corners[1].y, corners[2].x - corners[1].x, corners[1].y - corners[0].y);
+
+                float tooltipY = bgRect.yMax + 30f;
+
+                GUITools.DrawRect(new Rect(m_windowRect.x - margin, tooltipY, contentSize.x + (margin * 2), height + (margin * 2)), s_backgroundColor);
                 GUI.Label(
-                    new Rect(m_windowRect.x, m_background.rectTransform.rect.height + 30f + margin, m_windowRect.width, LineHeight * 2f),
+                    new Rect(m_windowRect.x, tooltipY + margin, m_windowRect.width, LineHeight * 2f),
                     content,
                     m_consoleStyle
                 );
@@ -385,6 +394,32 @@ namespace Gungnir
             var backgroundColor = GUI.backgroundColor;
             GUI.backgroundColor = color;
             GUI.Box(position, content ?? GUIContent.none, textureStyle);
+            GUI.backgroundColor = backgroundColor;
+        }
+
+        public static void DrawCorners(Rect rect, float size, Color color, GUIContent content = null)
+        {
+            var backgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = color;
+
+            GUI.Box(new Rect(rect.xMin, rect.yMin, size, size), content ?? GUIContent.none, textureStyle);
+            GUI.Box(new Rect(rect.xMax - size, rect.yMin, size, size), content ?? GUIContent.none, textureStyle);
+            GUI.Box(new Rect(rect.xMin, rect.yMax - size, size, size), content ?? GUIContent.none, textureStyle);
+            GUI.Box(new Rect(rect.xMax - size, rect.yMax - size, size, size), content ?? GUIContent.none, textureStyle);
+
+            GUI.backgroundColor = backgroundColor;
+        }
+
+        public static void DrawCornersID(Rect rect, float size, Color color)
+        {
+            var backgroundColor = GUI.backgroundColor;
+            GUI.backgroundColor = color;
+
+            GUI.Box(new Rect(rect.xMin, rect.yMin, size, size), "1", textureStyle);
+            GUI.Box(new Rect(rect.xMax - size, rect.yMin, size, size), "2", textureStyle);
+            GUI.Box(new Rect(rect.xMin, rect.yMax - size, size, size), "3", textureStyle);
+            GUI.Box(new Rect(rect.xMax - size, rect.yMax - size, size, size), "4", textureStyle);
+
             GUI.backgroundColor = backgroundColor;
         }
 
