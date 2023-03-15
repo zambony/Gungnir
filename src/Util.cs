@@ -153,7 +153,7 @@ namespace Gungnir
             {
                 var query =
                     from player in Player.GetAllPlayers()
-                    where player.GetPlayerName().Simplified().StartsWith(name.ToLower(), StringComparison.OrdinalIgnoreCase)
+                    where player.GetPlayerName().Simplified().StartsWith(name, StringComparison.OrdinalIgnoreCase)
                     select player;
 
                 if (query.Count() > 1)
@@ -162,7 +162,7 @@ namespace Gungnir
                     // to find the exact match. If there's no exact match, the intent is unclear and we shouldn't process it.
                     foreach (Player player in query)
                     {
-                        if (player.GetPlayerName().Simplified().Equals(name.ToLower(), StringComparison.OrdinalIgnoreCase))
+                        if (player.GetPlayerName().Simplified().Equals(name, StringComparison.OrdinalIgnoreCase))
                             return player;
                     }
 
