@@ -718,14 +718,14 @@ namespace Gungnir
             {
                 Player.m_localPlayer.m_eitrRegenDelay = 0.0f;
                 Player.m_localPlayer.m_eiterRegen = 1000f;
-                Player.m_localPlayer.SetMaxEitr(1000f, true);
+                Player.m_localPlayer.InvokePrivate<object>("SetMaxEitr", 1000f, true);
                 Plugin.NoMana = true;
             }
             else
             {
                 Player.m_localPlayer.m_eitrRegenDelay = 1f;
                 Player.m_localPlayer.m_eiterRegen = 5f;
-                Player.m_localPlayer.SetMaxEitr(100f, true);
+                Player.m_localPlayer.InvokePrivate<object>("SetMaxEitr", 100f, true);
                 Plugin.NoMana = false;
             }
 
@@ -930,7 +930,7 @@ namespace Gungnir
 
             int count = 0;
 
-            foreach (WearNTear obj in WearNTear.GetAllInstaces())
+            foreach (WearNTear obj in WearNTear.GetAllInstances())
             {
                 if (Vector3.Distance(obj.gameObject.transform.position, Player.m_localPlayer.transform.position) <= radius)
                 {
@@ -1122,7 +1122,6 @@ namespace Gungnir
             // I don't know if this is necessary, the base game's spawn command doesn't do it.
             // SkToolbox does it, seems like it's for networking reasons. I'll leave it here until I understand
             // whether it's necessary or not.
-            netView.GetZDO().SetPGWVersion(zdoManager.GetPGWVersion());
             zdoManager.Set("spawn_id", netView.GetZDO().m_uid);
             zdoManager.Set("alive_time", ZNet.instance.GetTime().Ticks);
 
