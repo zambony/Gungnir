@@ -179,8 +179,8 @@ namespace Gungnir.Patch
                 return true;
             }
         }
-        
-        [HarmonyPatch(typeof(Player), "UpdateStats")]
+
+        [HarmonyPatch(typeof(Player), "UpdateStats", new System.Type[] { typeof(float) })]
         public static class UpdateStatsEitrPatch
         {
             private static void Postfix(ref ZNetView ___m_nview, ref float ___m_eitr)

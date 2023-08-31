@@ -21,6 +21,7 @@ namespace Gungnir
         private const int s_historyEntryMargin = 10;
         private static Color s_backgroundColor = new Color32(42, 47, 58, 165);
         private GUIStyle  m_consoleStyle       = new GUIStyle();
+        private Font m_font                    = Font.CreateDynamicFontFromOSFont("Consolas", s_fontSize);
 
         // History-related values.
         private List<string> m_history        = new List<string>();
@@ -107,10 +108,22 @@ namespace Gungnir
         /// </summary>
         private void CreateStyle()
         {
-            Font font = Font.CreateDynamicFontFromOSFont("Consolas", s_fontSize);
+            string[] fontPaths = Font.GetPathsToOSFonts();
+            string consolaPath = "Consolas";
+
+            // Locate the Consolas font, because TextMeshPro needs a path.
+            foreach (var path in fontPaths)
+            {
+                if (path.IndexOf("consola.ttf", StringComparison.OrdinalIgnoreCase) != -1)
+                {
+                    consolaPath = path;
+                    break;
+                }
+            }
+
             m_consoleStyle.wordWrap = true;
-            m_consoleStyle.fontSize = font.fontSize;
-            m_consoleStyle.font = font;
+            m_consoleStyle.fontSize = s_fontSize;
+            m_consoleStyle.font = m_font;
             m_consoleStyle.normal.textColor = Color.white;
             m_consoleStyle.richText = true;
             m_consoleStyle.alignment = TextAnchor.UpperLeft;
@@ -137,12 +150,15 @@ namespace Gungnir
                     background.color = s_backgroundColor;
                 }
 
-                var textMeshProFont = TMP_FontAsset.CreateFontAsset(font);
+                Font osFont = new Font(consolaPath);
+                var textMeshProFont = TMP_FontAsset.CreateFontAsset(osFont);
                 Console.instance.m_output.font = textMeshProFont;
-                Console.instance.m_output.fontSize = font.fontSize;
+                Console.instance.m_input.textComponent.font = textMeshProFont;
+
+                Console.instance.m_output.fontSize = m_font.fontSize;
                 Console.instance.m_output.color = Color.white;
-                Console.instance.m_input.textComponent.font = font;
-                Console.instance.m_input.textComponent.fontSize = font.fontSize;
+                
+                Console.instance.m_input.textComponent.fontSize = m_font.fontSize;
                 Console.instance.m_input.caretColor = Color.white;
                 Console.instance.m_input.customCaretColor = true;
 

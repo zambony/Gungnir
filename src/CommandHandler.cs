@@ -627,20 +627,21 @@ namespace Gungnir
 
             HashSet<string> tagSet = new HashSet<string>();
 
-            int portalHash = Game.instance.m_portalPrefab.name.GetStableHashCode();
-
-            var query =
-                from pair in ZDOMan.instance.GetPrivateField<Dictionary<ZDOID, ZDO>>("m_objectsByID")
-                let tag = pair.Value.GetString("tag", null)
-                where pair.Value.GetPrefab() == portalHash && !string.IsNullOrEmpty(tag) && tag != " "
-                select pair.Value;
-
-            foreach (ZDO zdo in query)
+            foreach (int portalHash in Game.instance.PortalPrefabHash)
             {
-                string tag = zdo.GetString("tag", null);
+                var query =
+                    from pair in ZDOMan.instance.GetPrivateField<Dictionary<ZDOID, ZDO>>("m_objectsByID")
+                    let tag = pair.Value.GetString("tag", null)
+                    where pair.Value.GetPrefab() == portalHash && !string.IsNullOrEmpty(tag) && tag != " "
+                    select pair.Value;
 
-                if (!tagSet.Contains(tag))
-                    tagSet.Add(tag);
+                foreach (ZDO zdo in query)
+                {
+                    string tag = zdo.GetString("tag", null);
+
+                    if (!tagSet.Contains(tag))
+                        tagSet.Add(tag);
+                }
             }
 
             Logger.Log($"Found {tagSet.Count.ToString().WithColor(Logger.GoodColor)} tag(s)...", true);
