@@ -16,15 +16,15 @@ namespace Gungnir
         private const string s_argPattern = @"((?:<[^>]+>)|(?:\[[^\]]+\]))";
 
         // GUI Style values.
-        private const int s_maxHistory         = 1000;
+        private const int s_maxHistory         = 5000;
         private const int s_fontSize           = 16;
         private const int s_historyEntryMargin = 10;
         private static Color s_backgroundColor = new Color32(42, 47, 58, 165);
-        private GUIStyle  m_consoleStyle       = new GUIStyle();
+        private GUIStyle m_consoleStyle        = new GUIStyle();
         private Font m_font                    = Font.CreateDynamicFontFromOSFont("Consolas", s_fontSize);
 
         // History-related values.
-        private List<string> m_history        = new List<string>();
+        private List<string> m_history = new List<string>();
 
         // GUI drawing variables.
         private Vector2 m_scrollPosition = new Vector2(0, int.MaxValue);
