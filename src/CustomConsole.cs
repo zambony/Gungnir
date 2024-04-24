@@ -16,7 +16,7 @@ namespace Gungnir
         private const string s_argPattern = @"((?:<[^>]+>)|(?:\[[^\]]+\]))";
 
         // GUI Style values.
-        private const int s_maxHistory         = 5000;
+        private const int s_maxHistory         = 1000;
         private const int s_fontSize           = 16;
         private const int s_historyEntryMargin = 10;
         private static Color s_backgroundColor = new Color32(42, 47, 58, 165);
