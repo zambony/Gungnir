@@ -233,13 +233,13 @@ namespace Gungnir.Patch
                 {
                     if (___m_moveDir.magnitude < 0.1f)
                     {
-                        ___m_collider.material.frictionCombine = PhysicMaterialCombine.Maximum;
+                        ___m_collider.material.frictionCombine = PhysicsMaterialCombine.Maximum;
                         ___m_collider.material.staticFriction = 1f;
                         ___m_collider.material.dynamicFriction = 1f;
                     }
                     else
                     {
-                        ___m_collider.material.frictionCombine = PhysicMaterialCombine.Minimum;
+                        ___m_collider.material.frictionCombine = PhysicsMaterialCombine.Minimum;
                         ___m_collider.material.staticFriction = 0f;
                         ___m_collider.material.dynamicFriction = 0f;
                     }
